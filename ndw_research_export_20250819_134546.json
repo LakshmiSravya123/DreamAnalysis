@@ -1,0 +1,231 @@
+{
+  "metadata": {
+    "export_timestamp": "2025-08-19T13:45:46.600471",
+    "system_version": "Neural Dream Weaver v1.0",
+    "data_privacy": "Anonymized research data",
+    "total_sleep_time": 270,
+    "total_dreams_analyzed": 3
+  },
+  "sleep_architecture": {
+    "stage_distribution": {
+      "Light Sleep (Stage 1-2)": "9"
+    },
+    "frequency_analysis": [
+      {
+        "timestamp": 0.0,
+        "delta": 0.02802007261176654,
+        "theta": 0.05360871075012054,
+        "alpha": 0.08195519873664515,
+        "beta": 0.0393722187663283,
+        "stage": "Light Sleep (Stage 1-2)"
+      },
+      {
+        "timestamp": 30.0,
+        "delta": 0.028196772565004847,
+        "theta": 0.05337648648428693,
+        "alpha": 0.08163192195238547,
+        "beta": 0.039354379646618955,
+        "stage": "Light Sleep (Stage 1-2)"
+      },
+      {
+        "timestamp": 60.0,
+        "delta": 0.0279545592269567,
+        "theta": 0.0533943701399737,
+        "alpha": 0.08252847254169833,
+        "beta": 0.03894125527617767,
+        "stage": "Light Sleep (Stage 1-2)"
+      },
+      {
+        "timestamp": 90.0,
+        "delta": 0.02820823117297004,
+        "theta": 0.0540768408050402,
+        "alpha": 0.08220092685054267,
+        "beta": 0.039420436530486574,
+        "stage": "Light Sleep (Stage 1-2)"
+      },
+      {
+        "timestamp": 120.0,
+        "delta": 0.028527928375858935,
+        "theta": 0.053623279538834064,
+        "alpha": 0.08201273348595196,
+        "beta": 0.03907408088023779,
+        "stage": "Light Sleep (Stage 1-2)"
+      },
+      {
+        "timestamp": 150.0,
+        "delta": 0.02821496064028595,
+        "theta": 0.05372304438749391,
+        "alpha": 0.08173724258784909,
+        "beta": 0.03968359801235298,
+        "stage": "Light Sleep (Stage 1-2)"
+      },
+      {
+        "timestamp": 180.0,
+        "delta": 0.028057667944267617,
+        "theta": 0.05306142534576358,
+        "alpha": 0.08185932941634341,
+        "beta": 0.039289865201948625,
+        "stage": "Light Sleep (Stage 1-2)"
+      },
+      {
+        "timestamp": 210.0,
+        "delta": 0.028106424579536125,
+        "theta": 0.054029231985183626,
+        "alpha": 0.08269035281498026,
+        "beta": 0.039829924323077075,
+        "stage": "Light Sleep (Stage 1-2)"
+      },
+      {
+        "timestamp": 240.0,
+        "delta": 0.028612231609708456,
+        "theta": 0.052838245791744745,
+        "alpha": 0.0818086646163135,
+        "beta": 0.03931075030427026,
+        "stage": "Light Sleep (Stage 1-2)"
+      }
+    ],
+    "sleep_efficiency": 0.85
+  },
+  "dream_analysis": {
+    "content_themes": [
+      {
+        "dream_id": 1,
+        "description_length": 55,
+        "symbol_count": 3,
+        "primary_emotions": [
+          "freedom",
+          "peace",
+          "wonder"
+        ]
+      },
+      {
+        "dream_id": 2,
+        "description_length": 59,
+        "symbol_count": 4,
+        "primary_emotions": [
+          "fear",
+          "anxiety",
+          "determination"
+        ]
+      },
+      {
+        "dream_id": 3,
+        "description_length": 58,
+        "symbol_count": 3,
+        "primary_emotions": [
+          "nostalgia",
+          "confusion",
+          "melancholy"
+        ]
+      }
+    ],
+    "emotional_profiles": [
+      {
+        "dream_id": 1,
+        "emotions": {
+          "joy": 0.7316692359267668,
+          "fear": 0.38987074065657673,
+          "anger": 0.3748829169356271,
+          "sadness": 0.06253009352851974,
+          "surprise": 0.43291106339227986,
+          "trust": 0.3599159969898732,
+          "anticipation": 0.620519901254384
+        }
+      },
+      {
+        "dream_id": 2,
+        "emotions": {
+          "joy": 0.34008452591717453,
+          "fear": 0.35852932661249676,
+          "anger": 0.008081241056577993,
+          "sadness": 0.4382681688807715,
+          "surprise": 0.4230380612770783,
+          "trust": 0.592657872511079,
+          "anticipation": 0.4023775357577794
+        }
+      },
+      {
+        "dream_id": 3,
+        "emotions": {
+          "joy": 0.46730703534649615,
+          "fear": 0.12234067864403328,
+          "anger": 0.33770775676568227,
+          "sadness": 0.10703544201334358,
+          "surprise": 0.22736807806810547,
+          "trust": 0.4421413654239253,
+          "anticipation": 0.6876067419374597
+        }
+      }
+    ],
+    "symbolic_frequency": {
+      "flying": "1",
+      "water": "1",
+      "ocean": "1",
+      "chase": "1",
+      "forest": "1",
+      "darkness": "1",
+      "shadows": "1",
+      "house": "1",
+      "childhood": "1",
+      "transformation": "1"
+    },
+    "ai_interpretations": [
+      {
+        "dream_id": 1,
+        "interpretation": "The presence of flying suggests themes of transformation and emotional processing.",
+        "confidence": 0.779934981904675,
+        "themes": [
+          "transformation",
+          "growth",
+          "identity"
+        ]
+      },
+      {
+        "dream_id": 2,
+        "interpretation": "This dream reflects your subconscious processing of recent life changes.",
+        "confidence": 0.7858750399692294,
+        "themes": [
+          "transformation",
+          "growth",
+          "identity"
+        ]
+      },
+      {
+        "dream_id": 3,
+        "interpretation": "The combination of house and childhood indicates a period of personal growth.",
+        "confidence": 0.8653587823150088,
+        "themes": [
+          "transformation",
+          "growth",
+          "identity"
+        ]
+      }
+    ]
+  },
+  "enhancement_protocols": [
+    {
+      "category": "Sleep Optimization",
+      "issue": "Low REM Sleep",
+      "recommendation": "REM Enhancement Protocol",
+      "description": "Increase REM sleep for better dream recall and emotional processing",
+      "target_frequency": "6-8 Hz (Theta waves)",
+      "duration": "20-30 minutes",
+      "timing": "During early morning sleep cycles"
+    },
+    {
+      "category": "Sleep Optimization",
+      "issue": "Insufficient Deep Sleep",
+      "recommendation": "Delta Wave Enhancement",
+      "description": "Promote deep sleep for physical restoration and memory consolidation",
+      "target_frequency": "0.5-4 Hz (Delta waves)",
+      "duration": "45-60 minutes",
+      "timing": "First half of night"
+    }
+  ],
+  "statistical_summary": {
+    "mean_rem_percentage": 0.0,
+    "mean_deep_sleep_percentage": 0.0,
+    "dream_recall_rate": 1.0,
+    "symbol_diversity_index": 10
+  }
+}
