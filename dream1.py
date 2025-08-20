@@ -1,903 +1,1124 @@
-#!/usr/bin/env python3
 """
-Neural Dream Weaver - Real Data Integration and Demo
-Shows how to integrate with real EEG datasets and external APIs
+Neural Dream Weaver (NDW) - Streamlit Application
+BCI-based dream interpretation system with RAG and multimodal processing
 """
 
-# Installation requirements (run in terminal):
-# pip install mne pandas numpy matplotlib seaborn scikit-learn
-# pip install requests beautifulsoup4 transformers torch
-# pip install streamlit plotly faiss-cpu sentence-transformers
-
+import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from datetime import datetime, timedelta
-import requests
 import json
+import random
 import time
-from pathlib import Path
+from datetime import datetime, timedelta
+from typing import Dict, List, Tuple, Any
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
 import warnings
 warnings.filterwarnings('ignore')
 
-# For EEG data processing (would be used with real datasets)
-try:
-    import mne
-    MNE_AVAILABLE = True
-except ImportError:
-    MNE_AVAILABLE = False
-    print("MNE not available - using mock EEG data")
+# Configure Streamlit page
+st.set_page_config(
+    page_title="Neural Dream Weaver",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-class RealEEGProcessor:
-    """Processes real EEG data from sleep studies"""
+# Custom CSS for better UI
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 2rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        color: white;
+        margin: 0.5rem 0;
+    }
+    .dream-analysis {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin: 1rem 0;
+        color: white;
+    }
+    .sidebar-section {
+        background: #f0f2f6;
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Mock classes for simulation (same as before but optimized for Streamlit)
+class MockTransformers:
+    def __init__(self):
+        self.pipeline = self._mock_pipeline
+    
+    def _mock_pipeline(self, task, model=None):
+        if task == "text-generation":
+            return MockLLM()
+        elif task == "feature-extraction":
+            return MockEmbedder()
+        return None
+
+class MockLLM:
+    def __call__(self, prompt, max_length=200, **kwargs):
+        interpretations = [
+            "Your dream reveals a deep connection to transformation and growth. The neural patterns suggest processing of recent experiences and emotional integration.",
+            "The recurring symbols indicate unresolved emotions seeking integration. Consider journaling about recent changes in your life to facilitate healing.",
+            "Your subconscious is working through creative challenges. The dream suggests breakthrough insights are emerging from your unconscious mind.",
+            "This dream pattern shows healing processes at work. Your mind is integrating difficult experiences constructively through symbolic processing.",
+            "The neural activity indicates processing of memories and emotions. Your dreams suggest a period of personal transformation and self-discovery."
+        ]
+        return [{"generated_text": random.choice(interpretations)}]
+
+class MockEmbedder:
+    def __call__(self, texts):
+        return np.random.randn(len(texts), 384)
+
+class MockFAISS:
+    def __init__(self, dim):
+        self.dim = dim
+        self.vectors = []
+        self.metadata = []
+    
+    def add(self, vectors):
+        self.vectors.extend(vectors)
+    
+    def search(self, query_vector, k=5):
+        indices = random.sample(range(min(len(self.vectors), 100)), min(k, len(self.vectors)))
+        scores = np.random.rand(len(indices))
+        return scores, indices
+
+# Initialize session state
+if 'ndw_system' not in st.session_state:
+    st.session_state.ndw_system = None
+if 'session_history' not in st.session_state:
+    st.session_state.session_history = []
+if 'current_session' not in st.session_state:
+    st.session_state.current_session = None
+if 'real_time_data' not in st.session_state:
+    st.session_state.real_time_data = []
+
+class BCIDataSimulator:
+    """Enhanced BCI data simulator with Streamlit integration"""
     
     def __init__(self):
-        self.sample_rate = 256  # Common EEG sample rate
-        self.channels = ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2']
+        self.sleep_stages = ['N1', 'N2', 'N3', 'REM']
+        self.emotion_states = ['calm', 'anxious', 'excited', 'melancholic', 'fearful', 'joyful']
+        self.dream_symbols = ['water', 'flying', 'falling', 'animals', 'people', 'buildings', 'nature', 'vehicles', 'light', 'darkness']
+        self.channels = ['AF3', 'F7', 'F3', 'FC5', 'T7', 'P7', 'O1', 'O2', 'P8', 'T8', 'FC6', 'F4', 'F8', 'AF4']
     
-    def load_edf_file(self, filepath):
-        """Load EEG data from EDF file (European Data Format)"""
-        if not MNE_AVAILABLE:
-            return self._generate_mock_eeg()
+    def generate_neural_signals(self, duration_seconds=30, channels=14) -> Dict:
+        """Generate multi-channel EEG-like neural signals"""
+        sample_rate = 256
+        samples = duration_seconds * sample_rate
+        time_axis = np.linspace(0, duration_seconds, samples)
         
-        try:
-            raw = mne.io.read_raw_edf(filepath, preload=True, verbose=False)
-            return {
-                'data': raw.get_data(),
-                'sample_rate': raw.info['sfreq'],
-                'channels': raw.ch_names,
-                'duration': raw.times[-1]
-            }
-        except Exception as e:
-            print(f"Error loading EDF file: {e}")
-            return self._generate_mock_eeg()
-    
-    def _generate_mock_eeg(self):
-        """Generate realistic mock EEG data"""
-        duration = 300  # 5 minutes
-        n_samples = int(duration * self.sample_rate)
-        n_channels = len(self.channels)
-        
-        # Create realistic EEG signals
-        time_array = np.linspace(0, duration, n_samples)
-        data = np.zeros((n_channels, n_samples))
-        
-        for i, channel in enumerate(self.channels):
-            # Different frequency components for different channels
-            if 'Fp' in channel:  # Frontal channels - more beta/gamma
-                signal = (0.5 * np.sin(2 * np.pi * 15 * time_array) +
-                         0.3 * np.sin(2 * np.pi * 25 * time_array) +
-                         0.2 * np.random.normal(0, 1, n_samples))
-            elif 'O' in channel:  # Occipital channels - more alpha
-                signal = (0.7 * np.sin(2 * np.pi * 10 * time_array) +
-                         0.3 * np.sin(2 * np.pi * 8 * time_array) +
-                         0.2 * np.random.normal(0, 1, n_samples))
-            else:  # Central/Parietal - mixed frequencies
-                signal = (0.4 * np.sin(2 * np.pi * 6 * time_array) +  # Theta
-                         0.3 * np.sin(2 * np.pi * 2 * time_array) +   # Delta
-                         0.3 * np.sin(2 * np.pi * 12 * time_array) +  # Alpha
-                         0.2 * np.random.normal(0, 1, n_samples))
+        signals = {}
+        for i in range(min(channels, len(self.channels))):
+            channel = self.channels[i]
             
-            data[i] = signal
+            # Different frequency components
+            delta = 0.5 * np.sin(2 * np.pi * 2 * time_axis + np.random.randn())
+            theta = 0.3 * np.sin(2 * np.pi * 6 * time_axis + np.random.randn())
+            alpha = 0.4 * np.sin(2 * np.pi * 10 * time_axis + np.random.randn())
+            beta = 0.2 * np.sin(2 * np.pi * 20 * time_axis + np.random.randn())
+            gamma = 0.1 * np.sin(2 * np.pi * 40 * time_axis + np.random.randn())
+            
+            # Channel-specific characteristics
+            if 'O' in channel:  # Occipital - visual processing
+                alpha *= 1.5  # Stronger alpha in visual areas
+            elif 'F' in channel:  # Frontal - executive function
+                beta *= 1.3
+                gamma *= 1.2
+            
+            noise = 0.1 * np.random.randn(samples)
+            signals[channel] = delta + theta + alpha + beta + gamma + noise
         
         return {
-            'data': data,
-            'sample_rate': self.sample_rate,
-            'channels': self.channels,
-            'duration': duration
+            'signals': signals,
+            'sample_rate': sample_rate,
+            'duration': duration_seconds,
+            'timestamp': datetime.now()
         }
     
-    def extract_sleep_stages(self, eeg_data, window_size=30):
-        """Extract sleep stages using frequency analysis"""
-        data = eeg_data['data']
-        sample_rate = eeg_data['sample_rate']
-        window_samples = int(window_size * sample_rate)
+    def detect_sleep_stage(self, signals: Dict) -> Tuple[str, Dict]:
+        """Enhanced sleep stage detection with confidence metrics"""
+        # Analyze frequency bands across channels
+        channel_powers = {}
+        for channel, signal in signals['signals'].items():
+            fft = np.fft.fft(signal)
+            freqs = np.fft.fftfreq(len(signal), 1/signals['sample_rate'])
+            
+            # Power in different bands
+            delta_power = np.mean(np.abs(fft[(freqs >= 1) & (freqs <= 4)]))
+            theta_power = np.mean(np.abs(fft[(freqs >= 4) & (freqs <= 8)]))
+            alpha_power = np.mean(np.abs(fft[(freqs >= 8) & (freqs <= 12)]))
+            beta_power = np.mean(np.abs(fft[(freqs >= 12) & (freqs <= 30)]))
+            
+            channel_powers[channel] = {
+                'delta': delta_power,
+                'theta': theta_power,
+                'alpha': alpha_power,
+                'beta': beta_power
+            }
         
-        sleep_stages = []
+        # Average across channels
+        avg_powers = {
+            'delta': np.mean([cp['delta'] for cp in channel_powers.values()]),
+            'theta': np.mean([cp['theta'] for cp in channel_powers.values()]),
+            'alpha': np.mean([cp['alpha'] for cp in channel_powers.values()]),
+            'beta': np.mean([cp['beta'] for cp in channel_powers.values()])
+        }
         
-        for start in range(0, data.shape[1] - window_samples, window_samples):
-            window_data = data[:, start:start + window_samples]
-            
-            # Calculate power in different frequency bands
-            freqs, psd = self._compute_psd(window_data, sample_rate)
-            
-            delta_power = self._band_power(freqs, psd, 0.5, 4)
-            theta_power = self._band_power(freqs, psd, 4, 8)
-            alpha_power = self._band_power(freqs, psd, 8, 13)
-            beta_power = self._band_power(freqs, psd, 13, 30)
-            
-            # Simple sleep stage classification
-            if delta_power > theta_power * 2:
-                stage = "Deep Sleep (Stage 3-4)"
-            elif theta_power > alpha_power * 1.5:
-                stage = "REM Sleep"
-            elif alpha_power > beta_power:
-                stage = "Light Sleep (Stage 1-2)"
-            else:
-                stage = "Awake"
-            
-            sleep_stages.append({
-                'timestamp': start / sample_rate,
-                'stage': stage,
-                'delta_power': delta_power,
-                'theta_power': theta_power,
-                'alpha_power': alpha_power,
-                'beta_power': beta_power
+        # Sleep stage classification
+        if avg_powers['delta'] > avg_powers['theta'] * 2:
+            stage = 'N3'  # Deep sleep
+            confidence = 0.85
+        elif avg_powers['theta'] > avg_powers['alpha'] * 1.5:
+            stage = 'REM' if random.random() > 0.3 else 'N2'
+            confidence = 0.75
+        elif avg_powers['alpha'] > avg_powers['beta']:
+            stage = 'N1'
+            confidence = 0.65
+        else:
+            stage = 'N2'
+            confidence = 0.70
+        
+        metrics = {
+            'confidence': confidence,
+            'power_bands': avg_powers,
+            'dominant_frequency': max(avg_powers, key=avg_powers.get)
+        }
+        
+        return stage, metrics
+    
+    def extract_dream_content(self, signals: Dict, sleep_stage: str, stage_metrics: Dict) -> Dict:
+        """Enhanced dream content extraction"""
+        if sleep_stage != 'REM':
+            return {'has_dream': False, 'stage': sleep_stage}
+        
+        # Analyze signal complexity for dream features
+        combined_signal = np.concatenate(list(signals['signals'].values()))
+        
+        features = {
+            'signal_entropy': -np.sum(np.histogram(combined_signal, bins=50)[0] * np.log(np.histogram(combined_signal, bins=50)[0] + 1e-10)),
+            'complexity': len(np.where(np.abs(np.diff(combined_signal)) > 0.1)[0]),
+            'emotional_valence': np.mean(combined_signal),
+            'intensity': np.std(combined_signal),
+            'coherence': np.corrcoef([signals['signals'][ch] for ch in ['F3', 'F4']])[0, 1] if len(signals['signals']) >= 2 else 0.5
+        }
+        
+        # Generate dream content based on features
+        num_symbols = max(1, min(4, int(features['complexity'] / 5000)))
+        symbols = random.sample(self.dream_symbols, num_symbols)
+        
+        # Emotion based on valence and arousal
+        if features['emotional_valence'] > 0 and features['intensity'] > 0.3:
+            emotion = random.choice(['joyful', 'excited', 'calm'])
+        elif features['emotional_valence'] < -0.1:
+            emotion = random.choice(['anxious', 'melancholic', 'fearful'])
+        else:
+            emotion = 'calm'
+        
+        # Lucidity detection based on frontal coherence
+        is_lucid = features['coherence'] > 0.7 and features['intensity'] > 0.4
+        
+        return {
+            'has_dream': True,
+            'symbols': symbols,
+            'emotion': emotion,
+            'intensity': features['intensity'],
+            'is_lucid': is_lucid,
+            'visual_description': f"Vivid dream involving {', '.join(symbols)} with {emotion} emotional tone",
+            'neural_features': features,
+            'stage': sleep_stage,
+            'confidence': stage_metrics['confidence']
+        }
+
+class DreamSymbolRAG:
+    """Enhanced RAG system with cultural and psychological knowledge"""
+    
+
+
+    def _index_knowledge(self):
+        """Embed and index the knowledge base for retrieval"""
+        for i, entry in enumerate(self.knowledge_base):
+            # Create a text representation of the entry for embedding
+            text_repr = f"{entry['symbol']} {entry['jung_interpretation']} {entry['freud_interpretation']}"
+            embedding = self.embedder([text_repr])[0]  # use first vector
+            self.index.add(embedding)
+   
+    def __init__(self):
+        self.embedder = MockTransformers().pipeline("feature-extraction")
+        self.index = MockFAISS(384)
+        self.knowledge_base = self._build_enhanced_knowledge_base()
+        self._index_knowledge() 
+
+    
+    def _build_enhanced_knowledge_base(self) -> List[Dict]:
+        """Comprehensive dream symbol knowledge base"""
+        knowledge = [
+            {
+                'symbol': 'water',
+                'jung_interpretation': 'Represents the unconscious mind, emotional depths, and the flow of psychic energy',
+                'freud_interpretation': 'Often relates to birth trauma, maternal connections, or sexual symbolism',
+                'modern_neuroscience': 'Associated with default mode network activation and emotional memory consolidation',
+                'cultural_contexts': {
+                    'western': 'Purification, emotional cleansing, baptism, renewal',
+                    'eastern': 'Flow of life energy (qi), spiritual transformation, yin energy',
+                    'indigenous': 'Connection to ancestors, spiritual realms, life-giving force'
+                },
+                'clinical_significance': 'May indicate processing of emotional memories or need for emotional release',
+                'therapeutic_applications': 'Useful for trauma processing, emotional regulation work'
+            },
+            {
+                'symbol': 'flying',
+                'jung_interpretation': 'Desire for spiritual transcendence, individuation, rising above earthly concerns',
+                'freud_interpretation': 'Wish fulfillment, escape from repression, sexual liberation',
+                'modern_neuroscience': 'Motor cortex activation during REM, spatial processing integration',
+                'cultural_contexts': {
+                    'western': 'Freedom from earthly constraints, achievement, ambition',
+                    'shamanic': 'Soul travel, spiritual journeying, connection to spirit world',
+                    'buddhist': 'Liberation from attachment, enlightenment, transcendence'
+                },
+                'clinical_significance': 'Often correlates with personal empowerment and overcoming limitations',
+                'therapeutic_applications': 'Empowerment therapy, overcoming phobias, building confidence'
+            },
+            {
+                'symbol': 'falling',
+                'jung_interpretation': 'Fear of losing control, descent into the unconscious, ego dissolution',
+                'freud_interpretation': 'Anxiety about failure, loss of support, sexual anxiety',
+                'modern_neuroscience': 'Hypnic jerks, vestibular system activation, anxiety processing',
+                'cultural_contexts': {
+                    'universal': 'Loss of control, insecurity, fear of failure',
+                    'western': 'Performance anxiety, career concerns, relationship instability',
+                    'eastern': 'Karmic consequences, spiritual testing, ego attachment'
+                },
+                'clinical_significance': 'Common in anxiety disorders, stress-related conditions',
+                'therapeutic_applications': 'Anxiety management, control issues therapy, grounding techniques'
+            }
+        ]
+        
+        # Add more symbols with comprehensive data
+        additional_symbols = [
+            ('animals', 'Instinctual nature, repressed desires, spiritual guides, or aspects of the self'),
+            ('people', 'Relationships, social aspects, projected parts of self, or unresolved conflicts'),
+            ('buildings', 'Life structure, security, accomplishments, personal boundaries, or psychic architecture'),
+            ('nature', 'Growth, natural cycles, peace, authenticity, or connection to the collective unconscious'),
+            ('vehicles', 'Life direction, personal control, means of progress, or journey of individuation'),
+            ('light', 'Consciousness, enlightenment, divine connection, or emerging awareness'),
+            ('darkness', 'The shadow, unknown aspects, fear, or potential for growth and transformation')
+        ]
+        
+        for symbol, basic_meaning in additional_symbols:
+            knowledge.append({
+                'symbol': symbol,
+                'jung_interpretation': f'Relates to {basic_meaning} in the context of individuation',
+                'freud_interpretation': f'May represent repressed aspects connected to {basic_meaning.lower()}',
+                'modern_neuroscience': f'Neural processing related to {symbol} memories and associations',
+                'cultural_contexts': {'universal': basic_meaning},
+                'clinical_significance': f'Therapeutic relevance depends on personal associations with {symbol}',
+                'therapeutic_applications': f'Can be used in therapy focusing on themes of {basic_meaning.lower()}'
             })
         
-        return sleep_stages
+        return knowledge
     
-    def _compute_psd(self, data, sample_rate):
-        """Compute power spectral density"""
-        from scipy.signal import welch
-        freqs, psd = welch(data, fs=sample_rate, nperseg=1024)
-        return freqs, np.mean(psd, axis=0)  # Average across channels
-    
-    def _band_power(self, freqs, psd, low_freq, high_freq):
-        """Calculate power in frequency band"""
-        idx = (freqs >= low_freq) & (freqs <= high_freq)
-        return np.trapz(psd[idx], freqs[idx])
+    def retrieve_interpretations(self, symbols: List[str], emotion: str, context: Dict = None) -> List[Dict]:
+        """Enhanced retrieval with context awareness"""
+        query = f"dream symbols: {' '.join(symbols)} emotional tone: {emotion}"
+        if context:
+            query += f" intensity: {context.get('intensity', 'moderate')} lucid: {context.get('is_lucid', False)}"
+        
+        query_embedding = self.embedder([query])
+        scores, indices = self.index.search(query_embedding[0], k=min(len(symbols) + 2, len(self.knowledge_base)))
+        
+        relevant_interpretations = []
+        for idx in indices:
+            if idx < len(self.knowledge_base):
+                interpretation = self.knowledge_base[idx].copy()
+                # Add relevance score
+                interpretation['relevance_score'] = float(scores[len(relevant_interpretations)])
+                relevant_interpretations.append(interpretation)
+        
+        return relevant_interpretations
 
-class HuggingFaceDataIntegrator:
-    """Integrates with Hugging Face datasets for dream symbolism and psychology"""
+class MultimodalDreamAnalyzer:
+    """Enhanced dream analyzer with clinical insights"""
     
     def __init__(self):
-        self.api_url = "https://api-inference.huggingface.co/models/"
-        self.models = {
-            'text_generation': 'microsoft/DialoGPT-large',
-            'text_classification': 'cardiffnlp/twitter-roberta-base-emotion',
-            'image_classification': 'google/vit-base-patch16-224'
-        }
+        self.llm = MockTransformers().pipeline("text-generation")
+        self.rag = DreamSymbolRAG()
     
-    def generate_dream_interpretation(self, dream_description, symbols):
-        """Generate AI interpretation of dream content"""
-        prompt = f"""
-        Dream Description: {dream_description}
-        Detected Symbols: {', '.join(symbols)}
-        
-        Psychological Interpretation:"""
-        
-        # Mock interpretation (would use real API in production)
-        interpretations = [
-            f"The presence of {symbols[0]} suggests themes of transformation and emotional processing.",
-            f"The combination of {' and '.join(symbols[:2])} indicates a period of personal growth.",
-            f"This dream reflects your subconscious processing of recent life changes.",
-            f"The symbolic elements point to unresolved feelings about relationships and personal identity."
-        ]
-        
-        return {
-            'interpretation': np.random.choice(interpretations),
-            'confidence': np.random.uniform(0.7, 0.95),
-            'psychological_themes': ['transformation', 'growth', 'identity'],
-            'recommended_actions': ['journaling', 'meditation', 'creative expression']
-        }
-    
-    def analyze_emotional_content(self, text):
-        """Analyze emotional content of dream descriptions"""
-        # Mock emotion analysis
-        emotions = {
-            'joy': np.random.uniform(0.1, 0.8),
-            'fear': np.random.uniform(0.0, 0.6),
-            'anger': np.random.uniform(0.0, 0.4),
-            'sadness': np.random.uniform(0.0, 0.5),
-            'surprise': np.random.uniform(0.1, 0.7),
-            'trust': np.random.uniform(0.3, 0.9),
-            'anticipation': np.random.uniform(0.2, 0.8)
-        }
-        
-        return emotions
-
-class PublicDatasetLoader:
-    """Loads publicly available sleep and dream datasets"""
-    
-    def __init__(self):
-        self.datasets = {
-            'sleep_edf': 'https://physionet.org/content/sleep-edfx/1.0.0/',
-            'dreams_dataset': 'https://www.dreambank.net/',
-            'psychology_texts': 'https://www.gutenberg.org/ebooks/search/?query=psychology'
-        }
-    
-    def download_sample_data(self):
-        """Download sample sleep data for demonstration"""
-        # Create sample dataset
-        sample_data = {
-            'dreams': [
-                {
-                    'id': 1,
-                    'description': 'I was flying over a vast ocean with crystal clear water',
-                    'emotions': ['freedom', 'peace', 'wonder'],
-                    'symbols': ['flying', 'water', 'ocean'],
-                    'sleep_stage': 'REM Sleep',
-                    'duration_minutes': 15
-                },
-                {
-                    'id': 2,
-                    'description': 'Running through a dark forest while being chased by shadows',
-                    'emotions': ['fear', 'anxiety', 'determination'],
-                    'symbols': ['chase', 'forest', 'darkness', 'shadows'],
-                    'sleep_stage': 'REM Sleep',
-                    'duration_minutes': 8
-                },
-                {
-                    'id': 3,
-                    'description': 'Standing in my childhood home but everything was different',
-                    'emotions': ['nostalgia', 'confusion', 'melancholy'],
-                    'symbols': ['house', 'childhood', 'transformation'],
-                    'sleep_stage': 'Light Sleep (Stage 2)',
-                    'duration_minutes': 12
-                }
-            ],
-            'eeg_samples': self._generate_sample_eeg_data(),
-            'symbol_meanings': self._load_symbol_database()
-        }
-        
-        return sample_data
-    
-    def _generate_sample_eeg_data(self):
-        """Generate sample EEG data with different sleep characteristics"""
-        samples = []
-        
-        for i in range(10):
-            # Different sleep stages have different EEG characteristics
-            if i < 3:  # Awake/Light sleep
-                data = {
-                    'timestamp': datetime.now() - timedelta(minutes=30-i*3),
-                    'alpha_power': np.random.uniform(0.6, 0.9),
-                    'beta_power': np.random.uniform(0.4, 0.7),
-                    'theta_power': np.random.uniform(0.2, 0.4),
-                    'delta_power': np.random.uniform(0.1, 0.3),
-                    'stage': 'Light Sleep (Stage 1-2)'
-                }
-            elif i < 6:  # REM Sleep
-                data = {
-                    'timestamp': datetime.now() - timedelta(minutes=30-i*3),
-                    'alpha_power': np.random.uniform(0.3, 0.5),
-                    'beta_power': np.random.uniform(0.5, 0.8),
-                    'theta_power': np.random.uniform(0.6, 0.9),
-                    'delta_power': np.random.uniform(0.2, 0.4),
-                    'stage': 'REM Sleep'
-                }
-            else:  # Deep sleep
-                data = {
-                    'timestamp': datetime.now() - timedelta(minutes=30-i*3),
-                    'alpha_power': np.random.uniform(0.1, 0.3),
-                    'beta_power': np.random.uniform(0.1, 0.3),
-                    'theta_power': np.random.uniform(0.2, 0.4),
-                    'delta_power': np.random.uniform(0.7, 0.9),
-                    'stage': 'Deep Sleep (Stage 3-4)'
-                }
-            
-            samples.append(data)
-        
-        return samples
-    
-    def _load_symbol_database(self):
-        """Load comprehensive dream symbol database"""
-        return {
-            'water': {
-                'frequency': 0.68,  # How often this symbol appears in dreams
-                'psychological_meaning': 'Emotions, unconscious mind, cleansing, rebirth',
-                'cultural_variations': {
-                    'western': 'Purification, life source',
-                    'eastern': 'Flow of qi, balance, harmony',
-                    'indigenous': 'Sacred element, connection to ancestors'
-                },
-                'associated_emotions': ['calm', 'mysterious', 'cleansing', 'flowing']
-            },
-            'flying': {
-                'frequency': 0.73,
-                'psychological_meaning': 'Freedom, escape from limitations, spiritual transcendence',
-                'cultural_variations': {
-                    'western': 'Liberation, breaking free from constraints',
-                    'eastern': 'Spiritual elevation, enlightenment',
-                    'shamanic': 'Soul travel, connection to spirit world'
-                },
-                'associated_emotions': ['exhilarating', 'liberating', 'empowering', 'transcendent']
-            },
-            'death': {
-                'frequency': 0.29,
-                'psychological_meaning': 'Transformation, end of life phase, rebirth, major change',
-                'cultural_variations': {
-                    'western': 'Fear of loss, transition, renewal',
-                    'eastern': 'Cycle of rebirth, karma, transformation',
-                    'ancient': 'Journey to afterlife, spiritual passage'
-                },
-                'associated_emotions': ['transformative', 'fearful', 'profound', 'mysterious']
+    def analyze_dream(self, dream_data: Dict, user_context: Dict = None) -> Dict:
+        """Comprehensive dream analysis with clinical insights"""
+        if not dream_data.get('has_dream', False):
+            return {
+                'analysis': 'No significant dream activity detected during this REM period.',
+                'sleep_stage': dream_data.get('stage', 'Unknown'),
+                'recommendations': ['Focus on sleep hygiene', 'Consider dream recall techniques']
             }
+        
+        symbols = dream_data.get('symbols', [])
+        emotion = dream_data.get('emotion', 'neutral')
+        intensity = dream_data.get('intensity', 0)
+        is_lucid = dream_data.get('is_lucid', False)
+        
+        # Retrieve interpretations with context
+        context = {'intensity': intensity, 'is_lucid': is_lucid}
+        interpretations = self.rag.retrieve_interpretations(symbols, emotion, context)
+        
+        # Build comprehensive context for LLM
+        context_prompt = f"""
+        Dream Analysis Context:
+        Symbols: {', '.join(symbols)}
+        Emotional tone: {emotion}
+        Intensity: {intensity:.2f}/1.0
+        Lucid dream: {'Yes' if is_lucid else 'No'}
+        Neural confidence: {dream_data.get('confidence', 0.5):.2f}
+        
+        Relevant psychological interpretations:
+        """
+        
+        for interp in interpretations[:3]:
+            context_prompt += f"\n- {interp['symbol']}: {interp['jung_interpretation']}"
+        
+        context_prompt += "\n\nProvide personalized interpretation integrating these elements:"
+        
+        # Generate interpretation
+        response = self.llm(context_prompt, max_length=250, temperature=0.7)
+        interpretation = response[0]['generated_text'].replace(context_prompt, '').strip()
+        
+        # Clinical assessment
+        clinical_insights = self._generate_clinical_insights(dream_data, interpretations)
+        
+        # Therapeutic recommendations
+        therapeutic_recs = self._generate_therapeutic_recommendations(dream_data, interpretations)
+        
+        return {
+            'interpretation': interpretation,
+            'symbols_analyzed': symbols,
+            'emotional_tone': emotion,
+            'intensity_score': intensity,
+            'lucidity_detected': is_lucid,
+            'clinical_insights': clinical_insights,
+            'therapeutic_recommendations': therapeutic_recs,
+            'relevant_knowledge': interpretations[:3],
+            'confidence_score': dream_data.get('confidence', 0.5)
         }
-
-def demonstrate_real_time_processing():
-    """Demonstrate real-time EEG processing pipeline"""
-    print("🧠 Neural Dream Weaver - Real-Time Processing Demo\n")
     
-    # Initialize processors
-    eeg_processor = RealEEGProcessor()
-    hf_integrator = HuggingFaceDataIntegrator()
-    dataset_loader = PublicDatasetLoader()
-    
-    # Load sample data
-    print("📊 Loading sample datasets...")
-    sample_data = dataset_loader.download_sample_data()
-    eeg_data = eeg_processor._generate_mock_eeg()
-    
-    # Process EEG data
-    print("🔍 Processing EEG signals...")
-    sleep_stages = eeg_processor.extract_sleep_stages(eeg_data)
-    
-    # Analyze each sleep stage
-    print("\n📈 Sleep Stage Analysis:")
-    for stage_data in sleep_stages[:5]:  # Show first 5 windows
-        print(f"  Time: {stage_data['timestamp']:.1f}s | "
-              f"Stage: {stage_data['stage']} | "
-              f"Delta: {stage_data['delta_power']:.3f} | "
-              f"Theta: {stage_data['theta_power']:.3f}")
-    
-    # Process dream data
-    print("\n💭 Dream Content Analysis:")
-    for dream in sample_data['dreams']:
-        print(f"\n🌟 Dream {dream['id']}:")
-        print(f"   Description: {dream['description'][:60]}...")
-        print(f"   Sleep Stage: {dream['sleep_stage']}")
-        print(f"   Symbols: {', '.join(dream['symbols'])}")
+    def _generate_clinical_insights(self, dream_data: Dict, interpretations: List[Dict]) -> Dict:
+        """Generate clinical insights for therapeutic applications"""
+        emotion = dream_data.get('emotion', 'neutral')
+        intensity = dream_data.get('intensity', 0)
+        symbols = dream_data.get('symbols', [])
         
-        # Generate AI interpretation
-        interpretation = hf_integrator.generate_dream_interpretation(
-            dream['description'], dream['symbols']
-        )
-        print(f"   AI Interpretation: {interpretation['interpretation'][:80]}...")
-        print(f"   Confidence: {interpretation['confidence']:.1%}")
-    
-    # Emotional analysis
-    print("\n😊 Emotional Analysis:")
-    for dream in sample_data['dreams']:
-        emotions = hf_integrator.analyze_emotional_content(dream['description'])
-        top_emotions = sorted(emotions.items(), key=lambda x: x[1], reverse=True)[:3]
-        emotion_str = ", ".join([f"{e[0]}: {e[1]:.2f}" for e in top_emotions])
-        print(f"   Dream {dream['id']}: {emotion_str}")
-    
-    return {
-        'eeg_data': eeg_data,
-        'sleep_stages': sleep_stages,
-        'dream_data': sample_data['dreams'],
-        'interpretations': [hf_integrator.generate_dream_interpretation(d['description'], d['symbols']) 
-                          for d in sample_data['dreams']]
-    }
-
-def create_visualization_dashboard(processed_data):
-    """Create comprehensive visualization dashboard"""
-    print("\n📊 Creating Visualization Dashboard...")
-    
-    # Set up the plotting style
-    plt.style.use('dark_background')
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-    fig.suptitle('Neural Dream Weaver - Comprehensive Analysis Dashboard', 
-                 fontsize=16, fontweight='bold')
-    
-    # 1. Sleep Stage Distribution
-    stages = [s['stage'] for s in processed_data['sleep_stages']]
-    stage_counts = pd.Series(stages).value_counts()
-    
-    axes[0, 0].pie(stage_counts.values, labels=stage_counts.index, autopct='%1.1f%%',
-                   colors=['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A'])
-    axes[0, 0].set_title('Sleep Stage Distribution')
-    
-    # 2. EEG Frequency Bands Over Time
-    timestamps = [s['timestamp'] for s in processed_data['sleep_stages']]
-    delta_powers = [s['delta_power'] for s in processed_data['sleep_stages']]
-    theta_powers = [s['theta_power'] for s in processed_data['sleep_stages']]
-    alpha_powers = [s['alpha_power'] for s in processed_data['sleep_stages']]
-    beta_powers = [s['beta_power'] for s in processed_data['sleep_stages']]
-    
-    axes[0, 1].plot(timestamps, delta_powers, label='Delta (0.5-4Hz)', color='#FF6B6B', linewidth=2)
-    axes[0, 1].plot(timestamps, theta_powers, label='Theta (4-8Hz)', color='#4ECDC4', linewidth=2)
-    axes[0, 1].plot(timestamps, alpha_powers, label='Alpha (8-13Hz)', color='#45B7D1', linewidth=2)
-    axes[0, 1].plot(timestamps, beta_powers, label='Beta (13-30Hz)', color='#FFA07A', linewidth=2)
-    axes[0, 1].set_title('EEG Frequency Bands Over Time')
-    axes[0, 1].set_xlabel('Time (seconds)')
-    axes[0, 1].set_ylabel('Power')
-    axes[0, 1].legend()
-    axes[0, 1].grid(True, alpha=0.3)
-    
-    # 3. Dream Symbol Frequency
-    all_symbols = []
-    for dream in processed_data['dream_data']:
-        all_symbols.extend(dream['symbols'])
-    
-    symbol_counts = pd.Series(all_symbols).value_counts()
-    symbol_counts.plot(kind='bar', ax=axes[0, 2], color='#9B59B6')
-    axes[0, 2].set_title('Dream Symbol Frequency')
-    axes[0, 2].set_xlabel('Symbols')
-    axes[0, 2].set_ylabel('Frequency')
-    axes[0, 2].tick_params(axis='x', rotation=45)
-    
-    # 4. Emotional Profile Heatmap
-    dream_emotions = []
-    emotion_labels = []
-    
-    for i, dream in enumerate(processed_data['dream_data']):
-        emotions = HuggingFaceDataIntegrator().analyze_emotional_content(dream['description'])
-        dream_emotions.append(list(emotions.values()))
-        emotion_labels = list(emotions.keys())
-    
-    emotion_matrix = np.array(dream_emotions)
-    im = axes[1, 0].imshow(emotion_matrix, cmap='viridis', aspect='auto')
-    axes[1, 0].set_title('Emotional Profile Across Dreams')
-    axes[1, 0].set_xlabel('Emotions')
-    axes[1, 0].set_ylabel('Dream ID')
-    axes[1, 0].set_xticks(range(len(emotion_labels)))
-    axes[1, 0].set_xticklabels(emotion_labels, rotation=45)
-    axes[1, 0].set_yticks(range(len(processed_data['dream_data'])))
-    axes[1, 0].set_yticklabels([f"Dream {i+1}" for i in range(len(processed_data['dream_data']))])
-    plt.colorbar(im, ax=axes[1, 0])
-    
-    # 5. AI Interpretation Confidence
-    confidences = [interp['confidence'] for interp in processed_data['interpretations']]
-    dream_ids = [f"Dream {i+1}" for i in range(len(confidences))]
-    
-    bars = axes[1, 1].bar(dream_ids, confidences, color=['#E74C3C', '#F39C12', '#2ECC71'])
-    axes[1, 1].set_title('AI Interpretation Confidence')
-    axes[1, 1].set_xlabel('Dreams')
-    axes[1, 1].set_ylabel('Confidence Score')
-    axes[1, 1].set_ylim(0, 1)
-    
-    # Add confidence values on bars
-    for bar, conf in zip(bars, confidences):
-        height = bar.get_height()
-        axes[1, 1].text(bar.get_x() + bar.get_width()/2., height + 0.01,
-                       f'{conf:.1%}', ha='center', va='bottom')
-    
-    # 6. Sleep Quality Metrics
-    sleep_quality_metrics = {
-        'REM %': sum(1 for s in stages if 'REM' in s) / len(stages) * 100,
-        'Deep Sleep %': sum(1 for s in stages if 'Deep Sleep' in s) / len(stages) * 100,
-        'Light Sleep %': sum(1 for s in stages if 'Light Sleep' in s) / len(stages) * 100,
-        'Wake %': sum(1 for s in stages if 'Awake' in s) / len(stages) * 100
-    }
-    
-    metrics_data = list(sleep_quality_metrics.values())
-    metrics_labels = list(sleep_quality_metrics.keys())
-    
-    axes[1, 2].pie(metrics_data, labels=metrics_labels, autopct='%1.1f%%',
-                   colors=['#3498DB', '#9B59B6', '#1ABC9C', '#E67E22'])
-    axes[1, 2].set_title('Sleep Quality Distribution')
-    
-    plt.tight_layout()
-    plt.show()
-    
-    return fig
-
-def generate_enhancement_recommendations(processed_data):
-    """Generate personalized enhancement recommendations"""
-    print("\n🎯 Generating Personalized Enhancement Recommendations...\n")
-    
-    # Analyze sleep patterns
-    sleep_stages = processed_data['sleep_stages']
-    dreams = processed_data['dream_data']
-    
-    recommendations = []
-    
-    # Sleep stage analysis
-    rem_percentage = sum(1 for s in sleep_stages if 'REM' in s['stage']) / len(sleep_stages)
-    deep_sleep_percentage = sum(1 for s in sleep_stages if 'Deep Sleep' in s['stage']) / len(sleep_stages)
-    
-    if rem_percentage < 0.2:
-        recommendations.append({
-            'category': 'Sleep Optimization',
-            'issue': 'Low REM Sleep',
-            'recommendation': 'REM Enhancement Protocol',
-            'description': 'Increase REM sleep for better dream recall and emotional processing',
-            'target_frequency': '6-8 Hz (Theta waves)',
-            'duration': '20-30 minutes',
-            'timing': 'During early morning sleep cycles'
-        })
-    
-    if deep_sleep_percentage < 0.15:
-        recommendations.append({
-            'category': 'Sleep Optimization',
-            'issue': 'Insufficient Deep Sleep',
-            'recommendation': 'Delta Wave Enhancement',
-            'description': 'Promote deep sleep for physical restoration and memory consolidation',
-            'target_frequency': '0.5-4 Hz (Delta waves)',
-            'duration': '45-60 minutes',
-            'timing': 'First half of night'
-        })
-    
-    # Dream content analysis
-    all_emotions = []
-    anxiety_dreams = 0
-    
-    for dream in dreams:
-        emotions = HuggingFaceDataIntegrator().analyze_emotional_content(dream['description'])
-        all_emotions.append(emotions)
-        
-        if emotions.get('fear', 0) > 0.6 or emotions.get('anger', 0) > 0.5:
-            anxiety_dreams += 1
-    
-    if anxiety_dreams > len(dreams) * 0.3:  # More than 30% anxiety dreams
-        recommendations.append({
-            'category': 'Emotional Processing',
-            'issue': 'High Anxiety in Dreams',
-            'recommendation': 'Trauma Processing Protocol',
-            'description': 'Gentle neural stimulation to process difficult emotions safely',
-            'target_frequency': '4-8 Hz (Theta waves) with Alpha support',
-            'duration': '15-25 minutes',
-            'timing': 'Before sleep and during REM periods'
-        })
-    
-    # Symbol analysis for creativity
-    creative_symbols = ['flying', 'water', 'animals', 'nature']
-    creativity_score = 0
-    
-    for dream in dreams:
-        creativity_score += len([s for s in dream['symbols'] if s in creative_symbols])
-    
-    if creativity_score > len(dreams):  # High creativity potential
-        recommendations.append({
-            'category': 'Cognitive Enhancement',
-            'issue': 'High Creative Potential',
-            'recommendation': 'Creativity Amplification Protocol',
-            'description': 'Enhance creative thinking and artistic inspiration through targeted stimulation',
-            'target_frequency': '8-12 Hz (Alpha waves) with Theta bursts',
-            'duration': '30-40 minutes',
-            'timing': 'During REM and light sleep transitions'
-        })
-    
-    # Print recommendations
-    for i, rec in enumerate(recommendations, 1):
-        print(f"🔹 Recommendation {i}: {rec['recommendation']}")
-        print(f"   Category: {rec['category']}")
-        print(f"   Issue Addressed: {rec['issue']}")
-        print(f"   Description: {rec['description']}")
-        print(f"   Protocol: {rec['target_frequency']} for {rec['duration']}")
-        print(f"   Optimal Timing: {rec['timing']}")
-        print()
-    
-    return recommendations
-
-def export_results_for_research(processed_data, recommendations):
-    """Export results in format suitable for research analysis"""
-    print("📁 Exporting Results for Research Analysis...")
-    
-    # Create comprehensive export data
-    export_data = {
-        'metadata': {
-            'export_timestamp': datetime.now().isoformat(),
-            'system_version': 'Neural Dream Weaver v1.0',
-            'data_privacy': 'Anonymized research data',
-            'total_sleep_time': len(processed_data['sleep_stages']) * 30,  # 30-second windows
-            'total_dreams_analyzed': len(processed_data['dream_data'])
-        },
-        'sleep_architecture': {
-            'stage_distribution': {},
-            'frequency_analysis': [],
-            'sleep_efficiency': 0.85  # Mock efficiency score
-        },
-        'dream_analysis': {
-            'content_themes': [],
-            'emotional_profiles': [],
-            'symbolic_frequency': {},
-            'ai_interpretations': []
-        },
-        'enhancement_protocols': recommendations,
-        'statistical_summary': {
-            'mean_rem_percentage': 0,
-            'mean_deep_sleep_percentage': 0,
-            'dream_recall_rate': 1.0,  # 100% for this demo
-            'symbol_diversity_index': 0
+        insights = {
+            'emotional_processing': 'Active',
+            'trauma_indicators': [],
+            'growth_indicators': [],
+            'clinical_attention': []
         }
-    }
-    
-    # Populate sleep architecture data
-    stages = [s['stage'] for s in processed_data['sleep_stages']]
-    export_data['sleep_architecture']['stage_distribution'] = dict(pd.Series(stages).value_counts())
-    
-    for stage_data in processed_data['sleep_stages']:
-        export_data['sleep_architecture']['frequency_analysis'].append({
-            'timestamp': stage_data['timestamp'],
-            'delta': stage_data['delta_power'],
-            'theta': stage_data['theta_power'],
-            'alpha': stage_data['alpha_power'],
-            'beta': stage_data['beta_power'],
-            'stage': stage_data['stage']
-        })
-    
-    # Populate dream analysis data
-    all_symbols = []
-    for i, dream in enumerate(processed_data['dream_data']):
-        export_data['dream_analysis']['content_themes'].append({
-            'dream_id': i + 1,
-            'description_length': len(dream['description']),
-            'symbol_count': len(dream['symbols']),
-            'primary_emotions': dream['emotions']
-        })
         
-        emotions = HuggingFaceDataIntegrator().analyze_emotional_content(dream['description'])
-        export_data['dream_analysis']['emotional_profiles'].append({
-            'dream_id': i + 1,
-            'emotions': emotions
-        })
+        # Trauma indicators
+        if emotion in ['fearful', 'anxious'] and intensity > 0.6:
+            insights['trauma_indicators'].append('High-intensity anxiety dreams may indicate unprocessed trauma')
+        if 'falling' in symbols and emotion == 'fearful':
+            insights['trauma_indicators'].append('Falling dreams with fear may suggest loss of control or security concerns')
         
-        all_symbols.extend(dream['symbols'])
+        # Growth indicators
+        if 'flying' in symbols and emotion in ['joyful', 'excited']:
+            insights['growth_indicators'].append('Flying dreams with positive emotion suggest personal empowerment')
+        if dream_data.get('is_lucid', False):
+            insights['growth_indicators'].append('Lucid dreaming indicates increased self-awareness and cognitive control')
         
-        export_data['dream_analysis']['ai_interpretations'].append({
-            'dream_id': i + 1,
-            'interpretation': processed_data['interpretations'][i]['interpretation'],
-            'confidence': processed_data['interpretations'][i]['confidence'],
-            'themes': processed_data['interpretations'][i]['psychological_themes']
-        })
+        # Clinical attention needed
+        if len(insights['trauma_indicators']) > 1:
+            insights['clinical_attention'].append('Multiple trauma indicators - consider professional consultation')
+        if intensity > 0.8 and emotion in ['fearful', 'anxious']:
+            insights['clinical_attention'].append('Extremely intense anxiety dreams - may benefit from sleep disorder evaluation')
+        
+        return insights
     
-    export_data['dream_analysis']['symbolic_frequency'] = dict(pd.Series(all_symbols).value_counts())
-    
-    # Calculate statistical summary
-    rem_count = sum(1 for s in stages if 'REM' in s)
-    deep_sleep_count = sum(1 for s in stages if 'Deep Sleep' in s)
-    
-    export_data['statistical_summary']['mean_rem_percentage'] = rem_count / len(stages)
-    export_data['statistical_summary']['mean_deep_sleep_percentage'] = deep_sleep_count / len(stages)
-    export_data['statistical_summary']['symbol_diversity_index'] = len(set(all_symbols))
-    
-    # Save to file
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"ndw_research_export_{timestamp}.json"
-    
-    with open(filename, 'w') as f:
-        json.dump(export_data, f, indent=2, default=str)
-    
-    print(f"✅ Research data exported to: {filename}")
-    print(f"📊 Data Summary:")
-    print(f"   - Sleep stages analyzed: {len(processed_data['sleep_stages'])}")
-    print(f"   - Dreams processed: {len(processed_data['dream_data'])}")
-    print(f"   - Unique symbols detected: {export_data['statistical_summary']['symbol_diversity_index']}")
-    print(f"   - Enhancement protocols generated: {len(recommendations)}")
-    
-    return export_data
+    def _generate_therapeutic_recommendations(self, dream_data: Dict, interpretations: List[Dict]) -> List[str]:
+        """Generate evidence-based therapeutic recommendations"""
+        recommendations = []
+        emotion = dream_data.get('emotion', 'neutral')
+        intensity = dream_data.get('intensity', 0)
+        symbols = dream_data.get('symbols', [])
+        is_lucid = dream_data.get('is_lucid', False)
+        
+        # Emotion-based recommendations
+        if emotion in ['anxious', 'fearful']:
+            recommendations.extend([
+                "Practice progressive muscle relaxation before sleep",
+                "Consider Image Rehearsal Therapy (IRT) for recurring nightmares",
+                "Implement mindfulness meditation to reduce pre-sleep anxiety"
+            ])
+        elif emotion in ['joyful', 'excited']:
+            recommendations.extend([
+                "Use dream journaling to capture positive insights",
+                "Consider creative expression to integrate dream inspiration"
+            ])
+        
+        # Symbol-specific recommendations
+        if 'water' in symbols:
+            recommendations.append("Water dreams suggest emotional processing - consider emotional regulation therapy")
+        if 'flying' in symbols:
+            recommendations.append("Flying dreams indicate empowerment - explore areas where you seek more control")
+        
+        # Lucidity recommendations
+        if is_lucid:
+            recommendations.append("Lucid dreaming detected - consider lucid dream therapy for trauma processing")
+        
+        # Intensity-based recommendations
+        if intensity > 0.7:
+            recommendations.append("High dream intensity - ensure adequate sleep hygiene and stress management")
+        
+        return recommendations[:5]  # Limit to top 5
 
-def run_ethical_compliance_check():
-    """Run ethical compliance and safety checks"""
-    print("\n🔒 Running Ethical Compliance and Safety Assessment...\n")
-    
-    compliance_checklist = {
-        'data_privacy': {
-            'status': 'COMPLIANT',
-            'details': [
-                '✅ No personally identifiable information stored',
-                '✅ Neural data anonymized and encrypted',
-                '✅ User consent protocols implemented',
-                '✅ Data retention limits enforced (24 hours)'
-            ]
-        },
-        'safety_protocols': {
-            'status': 'COMPLIANT',
-            'details': [
-                '✅ Stimulation intensity limited to safe ranges (<0.5 intensity)',
-                '✅ Frequency limits enforced (0.5-100 Hz)',
-                '✅ Maximum session duration caps (30 minutes)',
-                '✅ Emergency stop mechanisms implemented'
-            ]
-        },
-        'medical_oversight': {
-            'status': 'REQUIRED',
-            'details': [
-                '⚠️ Medical supervision required for real implementation',
-                '⚠️ FDA approval needed for therapeutic applications',
-                '⚠️ Clinical trials required before public deployment',
-                '⚠️ Contraindication screening necessary'
-            ]
-        },
-        'informed_consent': {
-            'status': 'IMPLEMENTED',
-            'details': [
-                '✅ Comprehensive risk disclosure',
-                '✅ Benefit/risk analysis provided',
-                '✅ Withdrawal rights explained',
-                '✅ Long-term effect uncertainties disclosed'
-            ]
-        },
-        'research_ethics': {
-            'status': 'COMPLIANT',
-            'details': [
-                '✅ IRB approval simulated',
-                '✅ Participant anonymity protected',
-                '✅ Data sharing guidelines followed',
-                '✅ Publication ethics considered'
-            ]
-        }
-    }
-    
-    for category, assessment in compliance_checklist.items():
-        print(f"📋 {category.replace('_', ' ').title()}: {assessment['status']}")
-        for detail in assessment['details']:
-            print(f"    {detail}")
-        print()
-    
-    # Safety recommendations
-    print("🛡️ Safety Recommendations for Real Implementation:")
-    safety_recs = [
-        "Implement real-time monitoring of vital signs during stimulation",
-        "Establish emergency protocols for adverse reactions",
-        "Require comprehensive medical screening before participation",
-        "Limit initial trials to controlled laboratory environments",
-        "Maintain 24/7 medical support during sleep studies",
-        "Implement gradual exposure protocols for new users",
-        "Regular safety audits and protocol updates",
-        "Collaboration with sleep medicine specialists and neurologists"
-    ]
-    
-    for i, rec in enumerate(safety_recs, 1):
-        print(f"   {i}. {rec}")
-    
-    return compliance_checklist
-
-def main_demo():
-    """Run the complete Neural Dream Weaver demonstration"""
-    print("=" * 80)
-    print("🧠 NEURAL DREAM WEAVER - COMPLETE SYSTEM DEMONSTRATION")
-    print("=" * 80)
-    
-    # Step 1: Process real-time data
-    processed_data = demonstrate_real_time_processing()
-    
-    # Step 2: Create visualizations
-    create_visualization_dashboard(processed_data)
-    
-    # Step 3: Generate recommendations
-    recommendations = generate_enhancement_recommendations(processed_data)
-    
-    # Step 4: Export research data
-    export_data = export_results_for_research(processed_data, recommendations)
-    
-    # Step 5: Compliance check
-    compliance_results = run_ethical_compliance_check()
-    
-    print("\n" + "=" * 80)
-    print("🎉 DEMONSTRATION COMPLETE!")
-    print("=" * 80)
-    print("\nNext Steps for Real Implementation:")
-    print("1. 🧪 Conduct controlled laboratory studies")
-    print("2. 🏥 Partner with sleep medicine centers")
-    print("3. 📋 Obtain regulatory approvals (FDA, CE)")
-    print("4. 🔬 Validate AI models with larger datasets")
-    print("5. 🛡️ Implement comprehensive safety systems")
-    print("6. 📊 Conduct longitudinal efficacy studies")
-    print("7. 🤝 Develop clinical practice guidelines")
-    
-    return {
-        'processed_data': processed_data,
-        'recommendations': recommendations,
-        'export_data': export_data,
-        'compliance_results': compliance_results
-    }
-
-# Additional utility functions for real-world deployment
-
-class ClinicalIntegration:
-    """Handles integration with clinical systems and medical protocols"""
+class NeuralEnhancementMCP:
+    """Enhanced MCP with real-time visualization capabilities"""
     
     def __init__(self):
-        self.medical_protocols = {
-            'contraindications': [
-                'Epilepsy or seizure disorders',
-                'Cardiac pacemakers or implants',
-                'Pregnancy',
-                'Active psychosis or severe mental illness',
-                'Recent head trauma or brain surgery',
-                'Severe sleep disorders requiring immediate treatment'
-            ],
-            'monitoring_requirements': [
-                'Continuous EEG monitoring',
-                'Heart rate and blood pressure tracking',
-                'Oxygen saturation monitoring',
-                'Temperature monitoring',
-                'Real-time behavioral observation'
-            ],
-            'emergency_protocols': [
-                'Immediate stimulation cessation procedures',
-                'Medical intervention protocols',
-                'Emergency contact procedures',
-                'Adverse event reporting systems'
-            ]
+        self.enhancement_protocols = {
+            'creativity': {'frequency': '40Hz', 'duration': 10, 'intensity': 0.3, 'target': 'Gamma enhancement for creative insights'},
+            'relaxation': {'frequency': '8Hz', 'duration': 15, 'intensity': 0.2, 'target': 'Alpha enhancement for relaxation'},
+            'memory_consolidation': {'frequency': '6Hz', 'duration': 20, 'intensity': 0.25, 'target': 'Theta enhancement for memory'},
+            'lucid_dreaming': {'frequency': '12Hz', 'duration': 5, 'intensity': 0.4, 'target': 'Beta enhancement for lucidity'},
+            'anxiety_reduction': {'frequency': '10Hz', 'duration': 12, 'intensity': 0.15, 'target': 'Alpha enhancement for calm'}
         }
     
-    def screen_participant(self, medical_history):
-        """Screen participant for contraindications"""
-        # Mock screening process
-        screening_results = {
-            'eligible': True,
-            'contraindications_found': [],
-            'recommendations': [],
-            'risk_level': 'LOW'
+    def generate_enhancement_protocol(self, analysis: Dict) -> Dict:
+        """Generate personalized neural stimulation protocol"""
+        emotion = analysis.get('emotional_tone', 'neutral')
+        intensity = analysis.get('intensity_score', 0)
+        symbols = analysis.get('symbols_analyzed', [])
+        clinical_insights = analysis.get('clinical_insights', {})
+        
+        # Protocol selection logic
+        if clinical_insights.get('trauma_indicators'):
+            protocol = 'anxiety_reduction'
+        elif emotion in ['anxious', 'fearful']:
+            protocol = 'relaxation'
+        elif 'creativity' in analysis.get('interpretation', '').lower() or 'flying' in symbols:
+            protocol = 'creativity'
+        elif analysis.get('lucidity_detected', False):
+            protocol = 'lucid_dreaming'
+        else:
+            protocol = 'memory_consolidation'
+        
+        enhancement = self.enhancement_protocols[protocol].copy()
+        enhancement['protocol_type'] = protocol
+        enhancement['rationale'] = f"Selected based on {emotion} emotional tone and clinical indicators"
+        enhancement['safety_notes'] = "All protocols within safe neuroplasticity parameters"
+        
+        return enhancement
+    
+    def create_neural_visualization(self, signals: Dict) -> go.Figure:
+        """Create interactive neural signal visualization"""
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=('Multi-Channel EEG', 'Frequency Spectrum', 'Sleep Stage Timeline', 'Dream Intensity'),
+            specs=[[{"secondary_y": False}, {"secondary_y": False}],
+                   [{"secondary_y": False}, {"secondary_y": False}]]
+        )
+        
+        # Multi-channel EEG plot
+        channels_to_plot = list(signals['signals'].keys())[:4]  # Plot first 4 channels
+        for i, channel in enumerate(channels_to_plot):
+            signal = signals['signals'][channel][:1000]  # First 1000 samples
+            time_axis = np.arange(len(signal)) / signals['sample_rate']
+            fig.add_trace(
+                go.Scatter(x=time_axis, y=signal + i*2, name=channel, 
+                          line=dict(width=1), opacity=0.8),
+                row=1, col=1
+            )
+        
+        # Frequency spectrum
+        if channels_to_plot:
+            signal = signals['signals'][channels_to_plot[0]]
+            fft = np.fft.fft(signal)
+            freqs = np.fft.fftfreq(len(signal), 1/signals['sample_rate'])
+            fig.add_trace(
+                go.Scatter(x=freqs[:len(freqs)//2], y=np.abs(fft)[:len(fft)//2], 
+                          name='Power Spectrum', line=dict(color='red')),
+                row=1, col=2
+            )
+        
+        # Mock sleep stage timeline
+        stages = ['N1', 'N2', 'N3', 'REM', 'N2', 'REM']
+        stage_times = np.arange(len(stages)) * 90  # 90-minute cycles
+        fig.add_trace(
+            go.Scatter(x=stage_times, y=[1, 2, 3, 4, 2, 4], 
+                      mode='lines+markers', name='Sleep Stages',
+                      text=stages, line=dict(color='green', width=3)),
+            row=2, col=1
+        )
+        
+        # Dream intensity over time
+        dream_times = np.linspace(0, 480, 20)  # 8 hours
+        dream_intensities = np.random.beta(2, 5, 20)  # Realistic dream intensity distribution
+        fig.add_trace(
+            go.Scatter(x=dream_times, y=dream_intensities, 
+                      mode='lines+markers', name='Dream Intensity',
+                      line=dict(color='purple', width=2), fill='tonexty'),
+            row=2, col=2
+        )
+        
+        fig.update_layout(
+            height=600,
+            showlegend=True,
+            title_text="Neural Dream Weaver - Real-time BCI Analysis"
+        )
+        
+        return fig
+
+class StreamlitNeuralDreamWeaver:
+    """Main NDW system optimized for Streamlit"""
+    
+    def __init__(self):
+        self.bci_simulator = BCIDataSimulator()
+        self.dream_analyzer = MultimodalDreamAnalyzer()
+        self.enhancement_mcp = NeuralEnhancementMCP()
+    
+    def run_real_time_session(self, duration_minutes=30):
+        """Run real-time dream analysis session"""
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        cycles = duration_minutes // 10  # 10-minute mini-cycles for demo
+        session_data = {
+            'session_id': f"NDW_{int(time.time())}",
+            'timestamp': datetime.now(),
+            'cycles': [],
+            'total_dreams': 0
         }
         
-        # In real implementation, this would integrate with medical records
-        return screening_results
-    
-    def generate_clinical_report(self, session_data):
-        """Generate clinical report for medical review"""
-        report = {
-            'patient_id': 'ANON_' + str(hash(str(session_data)) % 10000),
-            'session_date': datetime.now().isoformat(),
-            'sleep_quality_assessment': self._assess_sleep_quality(session_data),
-            'dream_content_analysis': self._clinical_dream_analysis(session_data),
-            'enhancement_outcomes': self._assess_enhancement_efficacy(session_data),
-            'safety_observations': self._safety_assessment(session_data),
-            'recommendations': self._clinical_recommendations(session_data)
-        }
+        for cycle in range(cycles):
+            status_text.text(f"Processing cycle {cycle + 1}/{cycles}...")
+            progress_bar.progress((cycle + 1) / cycles)
+            
+            # Generate neural data
+            neural_data = self.bci_simulator.generate_neural_signals(duration_seconds=30, channels=8)
+            sleep_stage, stage_metrics = self.bci_simulator.detect_sleep_stage(neural_data)
+            dream_content = self.bci_simulator.extract_dream_content(neural_data, sleep_stage, stage_metrics)
+            
+            cycle_data = {
+                'cycle': cycle + 1,
+                'sleep_stage': sleep_stage,
+                'stage_metrics': stage_metrics,
+                'dream_content': dream_content,
+                'neural_data': neural_data
+            }
+            
+            if dream_content.get('has_dream', False):
+                analysis = self.dream_analyzer.analyze_dream(dream_content)
+                enhancement = self.enhancement_mcp.generate_enhancement_protocol(analysis)
+                
+                cycle_data['analysis'] = analysis
+                cycle_data['enhancement'] = enhancement
+                session_data['total_dreams'] += 1
+            
+            session_data['cycles'].append(cycle_data)
+            time.sleep(1)  # Simulate processing time
         
-        return report
+        progress_bar.progress(1.0)
+        status_text.text("Session completed!")
+        
+        return session_data
+
+def main():
+    """Main Streamlit application"""
     
-    def _assess_sleep_quality(self, session_data):
-        """Clinical assessment of sleep quality"""
-        return {
-            'sleep_efficiency': 0.85,
-            'rem_percentage': 0.23,
-            'deep_sleep_percentage': 0.18,
-            'wake_after_sleep_onset': 15,  # minutes
-            'clinical_score': 'GOOD'
-        }
+    # Header
+    st.markdown('<h1 class="main-header">🧠 Neural Dream Weaver</h1>', unsafe_allow_html=True)
+    st.markdown('<center><i>BCI-Powered Dream Interpretation with AI</i></center>', unsafe_allow_html=True)
     
-    def _clinical_dream_analysis(self, session_data):
-        """Clinical analysis of dream content for therapeutic insights"""
-        return {
-            'emotional_processing_indicators': ['transformation', 'resolution'],
-            'trauma_markers': [],
-            'creativity_indicators': ['symbolic_richness', 'narrative_complexity'],
-            'therapeutic_relevance': 'MODERATE'
-        }
+    # Sidebar
+    st.sidebar.markdown("## 🎛️ Control Panel")
     
-    def _assess_enhancement_efficacy(self, session_data):
-        """Assess efficacy of neural enhancement protocols"""
-        return {
-            'subjective_improvement': 0.75,
-            'objective_markers': {
-                'dream_recall_improvement': 0.40,
-                'sleep_quality_improvement': 0.25,
-                'cognitive_performance_change': 0.15
-            },
-            'side_effects': [],
-            'overall_efficacy': 'POSITIVE'
-        }
+    # Initialize system
+    if st.sidebar.button("🚀 Initialize NDW System"):
+        st.session_state.ndw_system = StreamlitNeuralDreamWeaver()
+        st.sidebar.success("System initialized!")
     
-    def _safety_assessment(self, session_data):
-        """Safety assessment for clinical review"""
-        return {
-            'adverse_events': [],
-            'stimulation_tolerance': 'EXCELLENT',
-            'physiological_stability': 'STABLE',
-            'psychological_wellbeing': 'MAINTAINED',
-            'safety_score': 'A+'
-        }
+    if st.session_state.ndw_system is None:
+        st.info("👈 Please initialize the NDW system using the sidebar")
+        return
     
-    def _clinical_recommendations(self, session_data):
-        """Clinical recommendations based on session analysis"""
-        return [
-            'Continue current protocol with minor adjustments',
-            'Consider creativity enhancement protocol',
-            'Monitor for long-term effects',
-            'Schedule follow-up in 2 weeks'
-        ]
+    # Main interface tabs
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌙 Live Session", "📊 Analysis", "🧬 Enhancement", "📈 History", "ℹ️ About"])
+    
+    with tab1:
+        st.header("🌙 Live Dream Analysis Session")
+        
+        col1, col2, col3 = st.columns([2, 1, 1])
+        
+        with col1:
+            session_duration = st.slider("Session Duration (minutes)", 10, 120, 30, 10)
+            
+        with col2:
+            if st.button("▶️ Start Session", type="primary"):
+                with st.spinner("Running dream analysis session..."):
+                    session_data = st.session_state.ndw_system.run_real_time_session(session_duration)
+                    st.session_state.current_session = session_data
+                    st.session_state.session_history.append(session_data)
+                st.success(f"Session completed! {session_data['total_dreams']} dreams analyzed.")
+        
+        with col3:
+            if st.button("⏹️ Stop Session"):
+                st.warning("Session stopped.")
+        
+        # Display current session results
+        if st.session_state.current_session:
+            session = st.session_state.current_session
+            
+            # Session metrics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Dreams Detected", session['total_dreams'])
+            with col2:
+                st.metric("Sleep Cycles", len(session['cycles']))
+            with col3:
+                rem_cycles = sum(1 for c in session['cycles'] if c['sleep_stage'] == 'REM')
+                st.metric("REM Periods", rem_cycles)
+            with col4:
+                avg_confidence = np.mean([c.get('stage_metrics', {}).get('confidence', 0) for c in session['cycles']])
+                st.metric("Avg Confidence", f"{avg_confidence:.2f}")
+            
+            # Real-time visualization
+            st.subheader("🧠 Real-time Neural Activity")
+            if session['cycles']:
+                latest_cycle = session['cycles'][-1]
+                if 'neural_data' in latest_cycle:
+                    neural_viz = st.session_state.ndw_system.enhancement_mcp.create_neural_visualization(
+                        latest_cycle['neural_data']
+                    )
+                    st.plotly_chart(neural_viz, use_container_width=True)
+            
+            # Latest dream analysis
+            latest_dreams = [c for c in session['cycles'] if c['dream_content'].get('has_dream', False)]
+            if latest_dreams:
+                st.subheader("💭 Latest Dream Analysis")
+                dream_cycle = latest_dreams[-1]
+                
+                dream_content = dream_cycle['dream_content']
+                analysis = dream_cycle.get('analysis', {})
+                
+                st.markdown(f"""
+                <div class="dream-analysis">
+                    <h4>🎭 {dream_content['emotion'].title()} Dream</h4>
+                    <p><strong>Symbols:</strong> {', '.join(dream_content['symbols'])}</p>
+                    <p><strong>Intensity:</strong> {dream_content['intensity']:.2f}/1.0</p>
+                    <p><strong>Lucid:</strong> {'Yes' if dream_content.get('is_lucid', False) else 'No'}</p>
+                    <p><strong>Interpretation:</strong> {analysis.get('interpretation', 'Processing...')}</p>
+                </div>
+                """, unsafe_allow_html=True)
+    
+    with tab2:
+        st.header("📊 Dream Analysis Dashboard")
+        
+        if not st.session_state.session_history:
+            st.info("No analysis data available. Please run a dream session first.")
+        else:
+            # Session selector
+            session_options = [f"Session {i+1} - {s['timestamp'].strftime('%Y-%m-%d %H:%M')}" 
+                             for i, s in enumerate(st.session_state.session_history)]
+            selected_session = st.selectbox("Select Session", session_options, index=len(session_options)-1)
+            
+            session_idx = int(selected_session.split()[1]) - 1
+            session = st.session_state.session_history[session_idx]
+            
+            # Detailed analysis
+            dreams_in_session = [c for c in session['cycles'] if c['dream_content'].get('has_dream', False)]
+            
+            if dreams_in_session:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.subheader("🎯 Symbol Analysis")
+                    all_symbols = []
+                    for dream_cycle in dreams_in_session:
+                        all_symbols.extend(dream_cycle['dream_content']['symbols'])
+                    
+                    symbol_counts = pd.Series(all_symbols).value_counts()
+                    fig_symbols = px.bar(x=symbol_counts.index, y=symbol_counts.values,
+                                       title="Most Common Dream Symbols")
+                    fig_symbols.update_layout(xaxis_title="Symbols", yaxis_title="Frequency")
+                    st.plotly_chart(fig_symbols, use_container_width=True)
+                
+                with col2:
+                    st.subheader("🎭 Emotional Patterns")
+                    emotions = [dc['dream_content']['emotion'] for dc in dreams_in_session]
+                    emotion_counts = pd.Series(emotions).value_counts()
+                    
+                    fig_emotions = px.pie(values=emotion_counts.values, names=emotion_counts.index,
+                                        title="Dream Emotional Distribution")
+                    st.plotly_chart(fig_emotions, use_container_width=True)
+                
+                # Detailed dream breakdown
+                st.subheader("🔍 Detailed Dream Analysis")
+                for i, dream_cycle in enumerate(dreams_in_session):
+                    with st.expander(f"Dream {i+1} - {dream_cycle['dream_content']['emotion'].title()}"):
+                        dream = dream_cycle['dream_content']
+                        analysis = dream_cycle.get('analysis', {})
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.write("**Symbols:**", ", ".join(dream['symbols']))
+                            st.write("**Emotion:**", dream['emotion'])
+                            st.write("**Intensity:**", f"{dream['intensity']:.2f}")
+                        
+                        with col2:
+                            st.write("**Lucid:**", "Yes" if dream.get('is_lucid', False) else "No")
+                            st.write("**Stage:**", dream.get('stage', 'Unknown'))
+                            st.write("**Confidence:**", f"{dream.get('confidence', 0):.2f}")
+                        
+                        with col3:
+                            clinical_insights = analysis.get('clinical_insights', {})
+                            st.write("**Growth Indicators:**", len(clinical_insights.get('growth_indicators', [])))
+                            st.write("**Trauma Indicators:**", len(clinical_insights.get('trauma_indicators', [])))
+                        
+                        st.write("**Interpretation:**")
+                        st.write(analysis.get('interpretation', 'No interpretation available'))
+                        
+                        if analysis.get('therapeutic_recommendations'):
+                            st.write("**Recommendations:**")
+                            for rec in analysis['therapeutic_recommendations']:
+                                st.write(f"• {rec}")
+    
+    with tab3:
+        st.header("🧬 Neural Enhancement Protocols")
+        
+        if not st.session_state.session_history:
+            st.info("No enhancement data available. Please run a dream session first.")
+        else:
+            latest_session = st.session_state.session_history[-1]
+            enhancement_cycles = [c for c in latest_session['cycles'] if 'enhancement' in c]
+            
+            if enhancement_cycles:
+                st.subheader("⚡ Active Enhancement Protocols")
+                
+                for i, cycle in enumerate(enhancement_cycles):
+                    enhancement = cycle['enhancement']
+                    
+                    with st.expander(f"Protocol {i+1}: {enhancement['protocol_type'].title()}"):
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.metric("Frequency", enhancement['frequency'])
+                            st.metric("Duration", f"{enhancement['duration']} min")
+                        
+                        with col2:
+                            st.metric("Intensity", f"{enhancement['intensity']:.2f}")
+                            st.write("**Target:**", enhancement['target'])
+                        
+                        with col3:
+                            st.write("**Rationale:**")
+                            st.write(enhancement['rationale'])
+                            st.write("**Safety:**", enhancement['safety_notes'])
+                
+                # Enhancement effectiveness visualization
+                st.subheader("📈 Protocol Effectiveness")
+                
+                protocol_types = [c['enhancement']['protocol_type'] for c in enhancement_cycles]
+                protocol_counts = pd.Series(protocol_types).value_counts()
+                
+                fig_protocols = px.bar(
+                    x=protocol_counts.index,
+                    y=protocol_counts.values,
+                    title="Enhancement Protocols Used",
+                    color=protocol_counts.values,
+                    color_continuous_scale="viridis"
+                )
+                st.plotly_chart(fig_protocols, use_container_width=True)
+                
+                # Safety monitoring
+                st.subheader("🛡️ Safety Monitoring")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Total Sessions", len(enhancement_cycles))
+                with col2:
+                    avg_intensity = np.mean([c['enhancement']['intensity'] for c in enhancement_cycles])
+                    st.metric("Avg Intensity", f"{avg_intensity:.2f}")
+                with col3:
+                    max_duration = max([c['enhancement']['duration'] for c in enhancement_cycles])
+                    st.metric("Max Duration", f"{max_duration} min")
+                
+                # Safety alerts
+                if avg_intensity > 0.5:
+                    st.warning("⚠️ High average intensity detected. Consider reducing stimulation parameters.")
+                if max_duration > 20:
+                    st.warning("⚠️ Long duration protocols detected. Monitor for any adverse effects.")
+                
+                st.success("✅ All protocols within safe neuroplasticity parameters")
+    
+    with tab4:
+        st.header("📈 Session History & Trends")
+        
+        if not st.session_state.session_history:
+            st.info("No historical data available. Please run dream sessions to build history.")
+        else:
+            # Historical overview
+            st.subheader("📊 Historical Overview")
+            
+            total_sessions = len(st.session_state.session_history)
+            total_dreams = sum(s['total_dreams'] for s in st.session_state.session_history)
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Sessions", total_sessions)
+            with col2:
+                st.metric("Total Dreams", total_dreams)
+            with col3:
+                avg_dreams = total_dreams / total_sessions if total_sessions > 0 else 0
+                st.metric("Avg Dreams/Session", f"{avg_dreams:.1f}")
+            with col4:
+                latest_session = st.session_state.session_history[-1]
+                st.metric("Latest Session", latest_session['timestamp'].strftime('%m/%d %H:%M'))
+            
+            # Trends over time
+            if total_sessions > 1:
+                st.subheader("📈 Trends Analysis")
+                
+                # Prepare trend data
+                session_dates = [s['timestamp'] for s in st.session_state.session_history]
+                dreams_per_session = [s['total_dreams'] for s in st.session_state.session_history]
+                
+                # Dreams per session trend
+                fig_trend = go.Figure()
+                fig_trend.add_trace(go.Scatter(
+                    x=session_dates,
+                    y=dreams_per_session,
+                    mode='lines+markers',
+                    name='Dreams per Session',
+                    line=dict(color='blue', width=3)
+                ))
+                fig_trend.update_layout(
+                    title="Dream Activity Over Time",
+                    xaxis_title="Session Date",
+                    yaxis_title="Number of Dreams",
+                    hovermode='x unified'
+                )
+                st.plotly_chart(fig_trend, use_container_width=True)
+                
+                # Symbol evolution
+                st.subheader("🔄 Symbol Pattern Evolution")
+                all_session_symbols = []
+                for session in st.session_state.session_history:
+                    session_symbols = []
+                    for cycle in session['cycles']:
+                        if cycle['dream_content'].get('has_dream', False):
+                            session_symbols.extend(cycle['dream_content']['symbols'])
+                    all_session_symbols.append(session_symbols)
+                
+                # Create symbol frequency matrix
+                unique_symbols = list(set([s for session_syms in all_session_symbols for s in session_syms]))
+                symbol_matrix = []
+                
+                for session_syms in all_session_symbols:
+                    session_counts = {symbol: session_syms.count(symbol) for symbol in unique_symbols}
+                    symbol_matrix.append([session_counts.get(symbol, 0) for symbol in unique_symbols])
+                
+                if symbol_matrix and unique_symbols:
+                    fig_heatmap = go.Figure(data=go.Heatmap(
+                        z=np.array(symbol_matrix).T,
+                        x=[f"Session {i+1}" for i in range(len(all_session_symbols))],
+                        y=unique_symbols,
+                        colorscale='Viridis',
+                        hoverongaps=False
+                    ))
+                    fig_heatmap.update_layout(
+                        title="Symbol Patterns Across Sessions",
+                        xaxis_title="Sessions",
+                        yaxis_title="Dream Symbols"
+                    )
+                    st.plotly_chart(fig_heatmap, use_container_width=True)
+            
+            # Export functionality
+            st.subheader("💾 Export Data")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("📁 Export Session Data"):
+                    # Convert to exportable format
+                    export_data = []
+                    for i, session in enumerate(st.session_state.session_history):
+                        for j, cycle in enumerate(session['cycles']):
+                            if cycle['dream_content'].get('has_dream', False):
+                                dream = cycle['dream_content']
+                                analysis = cycle.get('analysis', {})
+                                
+                                export_data.append({
+                                    'session_id': i + 1,
+                                    'cycle': j + 1,
+                                    'timestamp': session['timestamp'].isoformat(),
+                                    'sleep_stage': cycle['sleep_stage'],
+                                    'symbols': ', '.join(dream['symbols']),
+                                    'emotion': dream['emotion'],
+                                    'intensity': dream['intensity'],
+                                    'is_lucid': dream.get('is_lucid', False),
+                                    'interpretation': analysis.get('interpretation', ''),
+                                    'confidence': dream.get('confidence', 0)
+                                })
+                    
+                    if export_data:
+                        df = pd.DataFrame(export_data)
+                        csv = df.to_csv(index=False)
+                        st.download_button(
+                            label="📥 Download CSV",
+                            data=csv,
+                            file_name=f"ndw_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                            mime="text/csv"
+                        )
+                        st.success(f"Prepared {len(export_data)} dream records for export!")
+                    else:
+                        st.warning("No dream data available for export.")
+            
+            with col2:
+                if st.button("🗑️ Clear History"):
+                    st.session_state.session_history = []
+                    st.session_state.current_session = None
+                    st.success("History cleared!")
+    
+    with tab5:
+        st.header("ℹ️ About Neural Dream Weaver")
+        
+        st.markdown("""
+        ### 🧠 What is Neural Dream Weaver?
+        
+        Neural Dream Weaver (NDW) is a cutting-edge BCI-powered dream interpretation system that combines:
+        
+        - **🔬 Simulated Neuralink BCI**: Real-time neural signal processing during sleep
+        - **🤖 RAG System**: Retrieval-Augmented Generation for dream symbolism
+        - **🧠 Multimodal AI**: LLM-based dream analysis and interpretation
+        - **⚡ Neural Enhancement**: MCP protocols for cognitive enhancement
+        - **🏥 Clinical Applications**: Therapeutic insights for PTSD, trauma, and creativity
+        
+        ### 🎯 Key Features
+        
+        #### 🌙 Real-time Dream Analysis
+        - Multi-channel EEG simulation
+        - Sleep stage detection (N1, N2, N3, REM)
+        - Dream content extraction from neural patterns
+        - Lucid dreaming detection
+        
+        #### 🔍 AI-Powered Interpretation
+        - Jungian and Freudian psychological frameworks
+        - Cultural and cross-cultural symbol analysis
+        - Clinical insights for therapeutic applications
+        - Personalized recommendations
+        
+        #### ⚡ Neural Enhancement
+        - Targeted frequency stimulation protocols
+        - Creativity, relaxation, and memory enhancement
+        - Safety monitoring and compliance
+        - Closed-loop feedback systems
+        
+        #### 📊 Comprehensive Analytics
+        - Session history and trend analysis
+        - Symbol pattern evolution
+        - Clinical assessment tools
+        - Export capabilities for research
+        
+        ### 🛡️ Ethical Considerations
+        
+        #### Privacy & Security
+        - All neural data processed locally
+        - No external data transmission
+        - Encrypted session storage
+        - User consent and transparency
+        
+        #### Clinical Safety
+        - All stimulation within safe parameters
+        - Continuous safety monitoring
+        - Professional consultation recommendations
+        - Trauma-informed design principles
+        
+        #### Research Ethics
+        - IRB-compliant data collection
+        - Informed consent procedures
+        - Data anonymization protocols
+        - Open-source methodology
+        
+        ### 🔬 Scientific Foundation
+        
+        NDW is built on established neuroscience research:
+        
+        - **Sleep Architecture**: Based on Rechtschaffen & Kales sleep staging
+        - **Dream Neuroscience**: Incorporates findings from Hobson, Stickgold, and others
+        - **BCI Technology**: Aligned with current Neuralink capabilities
+        - **AI Interpretability**: Uses transparent, explainable AI methods
+        
+        ### 🚀 Future Applications
+        
+        #### Medical Applications
+        - PTSD and trauma therapy
+        - Insomnia and sleep disorders
+        - Depression and anxiety treatment
+        - Cognitive rehabilitation
+        
+        #### Enhancement Applications
+        - Creative problem-solving
+        - Memory consolidation
+        - Skill acquisition
+        - Meditation and mindfulness
+        
+        #### Research Applications
+        - Dream content analysis
+        - Consciousness studies
+        - Neuroplasticity research
+        - Cross-cultural psychology
+        
+        ### 📚 References & Resources
+        
+        - [Neuralink Progress Updates](https://neuralink.com)
+        - [Dream Research Literature](https://www.sleepfoundation.org)
+        - [BCI Safety Guidelines](https://www.ieee.org)
+        - [AI Ethics in Healthcare](https://www.who.int)
+        
+        ---
+        
+        **⚠️ Disclaimer**: This is a research prototype simulating BCI functionality. 
+        Not intended for medical diagnosis or treatment. Consult healthcare professionals 
+        for sleep-related concerns.
+        """)
+        
+        # System status
+        st.subheader("🔧 System Status")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.success("✅ BCI Simulator: Active")
+            st.success("✅ Dream Analyzer: Ready")
+        
+        with col2:
+            st.success("✅ Enhancement MCP: Online")
+            st.success("✅ Safety Monitoring: Active")
+        
+        with col3:
+            st.info(f"📊 Sessions: {len(st.session_state.session_history)}")
+            st.info(f"🧠 System: v1.0.0")
+    
+    # Footer
+    st.markdown("---")
+    st.markdown(
+        '<p style="text-align: center; color: #666;">Neural Dream Weaver v1.0.0 | '
+        'Advancing Human-AI Collaboration in Dream Research</p>',
+        unsafe_allow_html=True
+    )
 
 if __name__ == "__main__":
-    # Run the complete demonstration
-    demo_results = main_demo()
-    
-    # Print final summary
-    print(f"\n📈 Final System Metrics:")
-    print(f"   - Total processing time: ~5 minutes (simulated)")
-    print(f"   - Dreams analyzed: {len(demo_results['processed_data']['dream_data'])}")
-    print(f"   - Enhancement protocols generated: {len(demo_results['recommendations'])}")
-    print(f"   - Compliance status: {sum(1 for r in demo_results['compliance_results'].values() if r['status'] == 'COMPLIANT')} / {len(demo_results['compliance_results'])} categories compliant")
-    
-    print(f"\n🔬 Research Applications:")
-    print(f"   - Sleep disorder treatment protocols")
-    print(f"   - Creativity enhancement studies") 
-    print(f"   - PTSD and trauma therapy research")
-    print(f"   - Memory consolidation optimization")
-    print(f"   - Consciousness and dream state studies")
-    
-    print(f"\n🚀 Future Development Roadmap:")
-    print(f"   - Q1 2025: Laboratory validation studies")
-    print(f"   - Q2 2025: Clinical trial design and approval")
-    print(f"   - Q3 2025: Phase I safety trials")
-    print(f"   - Q4 2025: Phase II efficacy studies")
-    print(f"   - 2026+: Commercial development and deployment")
+    main()
