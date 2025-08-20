@@ -27,10 +27,10 @@ pip install tensorflow keras pytorch-lightning
 
 ```bash
 # Start the main Streamlit application
-streamlit run neural_dream_weaver.py
+streamlit run dream1.py
 
 # Run the data integration demo
-python ndw_data_demo.py
+python dream1.py
 
 # Access the web interface at: http://localhost:8501
 ```
