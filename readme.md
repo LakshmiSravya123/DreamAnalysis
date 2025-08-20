@@ -2,7 +2,7 @@
 
 ## 🧠 Project Overview
 
-Neural Dream Workshop is an innovative AI-powered system that integrates Neuralink's Brain-Computer Interface (BCI) technology with advanced machine learning to capture, analyze, and enhance dream experiences. The system represents a breakthrough in understanding the neural correlates of dreams and their therapeutic applications.
+Neural Dream Workshop is an innovative AI-powered system that integrates Brain-Computer Interface (BCI) technology with advanced machine learning to capture, analyze, and enhance dream experiences. The system represents a breakthrough in understanding the neural correlates of dreams and their therapeutic applications.
 
 ## 🎯 Core Objectives
 
