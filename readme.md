@@ -512,21 +512,6 @@ We welcome research collaborations in:
 - 🔮 Global deployment
 - 🔮 Continuous improvement
 
-## 📞 Contact & Support
-
-### Development Team
-
-- **Dr. Sarah Chen** - Neural Engineering Lead (s.chen@ndw.ai)
-- **Dr. Marcus Rodriguez** - AI/ML Architect (m.rodriguez@ndw.ai)
-- **Dr. Elena Vasquez** - Clinical Psychology (e.vasquez@ndw.ai)
-- **Dr. James Kim** - Bioethics Advisor (j.kim@ndw.ai)
-
-### Community
-
-- **GitHub**: [github.com/neural-dream-workshop](https://github.com/neural-dream-workshop)
-- **Discord**: [NDW Community Server](https://discord.gg/ndw-community)
-- **Twitter**: [@NDW_AI](https://twitter.com/NDW_AI)
-- **Email**: support@neuraldreamworkshop.ai
 
 ### Academic Collaborations
 
