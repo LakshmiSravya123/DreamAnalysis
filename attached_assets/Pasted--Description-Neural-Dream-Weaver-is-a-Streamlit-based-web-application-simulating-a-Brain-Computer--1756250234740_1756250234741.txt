@@ -1,0 +1,13 @@
+## Description
+Neural Dream Weaver is a Streamlit-based web application simulating a Brain-Computer Interface (BCI) system for dream analysis, mood tracking, and health monitoring. It uses simulated data for health metrics (heart rate, stress levels, daily steps, sleep duration) and neural signals, as no real-time BCI or health data is publicly available from OpenAI or similar sources. The app integrates OpenAI’s Realtime API (via Chat Completions with `gpt-4o-mini`) for real-time analysis of user-provided text inputs (e.g., dream descriptions or mood journals), offering emotion detection and dream interpretation. This enhanced version features a modern UI with light/dark themes, responsive design, data export, and improved simulations for realism.
+
+## Features
+- **Dashboard**: Displays real-time simulated metrics (heart rate, stress, mood), a 7-day mood timeline, sleep/dream activity charts, and a text input section for OpenAI-powered mood/dream analysis.
+- **Real-Time Monitoring**: Visualizes simulated EEG brain waves (alpha, beta) and a neural network graph of brain region connections.
+- **Health Analytics**: Interactive charts for selected metrics, correlation matrix, and personalized insights based on simulated data correlations.
+- **Dream Analysis**: Visualizes dream symbol frequencies and emotion intensities using pie charts and histograms, with OpenAI-driven interpretation of the latest dream.
+- **AI Companion**: A chat interface for real-time interaction, using OpenAI to analyze user text for emotions and provide contextual responses. Includes quick wellness actions (breathing exercise, meditation, mood check).
+- **Settings**: Configurable BCI parameters (electrode count, alerts) and theme toggle (light/dark) with session persistence.
+- **Data Export**: Download simulated data as a CSV file.
+- **Theme Support**: Light and dark modes, persisted via session state for a consistent user experience.
+- **Error Handling**: Graceful handling of missing API keys or OpenAI API errors, with manual key input as a fallback.
