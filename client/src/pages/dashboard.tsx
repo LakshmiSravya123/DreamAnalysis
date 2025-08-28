@@ -363,64 +363,151 @@ export default function Dashboard() {
         {/* Dream Analysis Section */}
         {currentSection === 'dreams' && (
           <main className="p-4 md:p-6 space-y-6">
+            {/* Dream Visual Gallery */}
+            <Card className="glass-card p-6 rounded-xl hover-glow">
+              <h3 className="text-lg font-futuristic font-semibold mb-6">Dream Visualization Gallery</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="relative group cursor-pointer">
+                  <img 
+                    src="/attached_assets/generated_images/Stone_bridge_over_water_937b9eb2.png"
+                    alt="Bridge over water - symbolizing connection and transition"
+                    className="w-full h-32 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
+                    data-testid="dream-image-bridge"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
+                    <p className="text-white text-xs p-2">Bridge - Connection & Transition</p>
+                  </div>
+                </div>
+                <div className="relative group cursor-pointer">
+                  <img 
+                    src="/attached_assets/generated_images/Dreamy_ocean_underwater_scene_960ab45b.png"
+                    alt="Underwater ocean scene with fish - representing emotional depths"
+                    className="w-full h-32 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
+                    data-testid="dream-image-ocean"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
+                    <p className="text-white text-xs p-2">Ocean - Emotional Depths</p>
+                  </div>
+                </div>
+                <div className="relative group cursor-pointer">
+                  <img 
+                    src="/attached_assets/generated_images/Flying_through_clouds_freedom_d3128361.png"
+                    alt="Flying through clouds - representing freedom and transcendence"
+                    className="w-full h-32 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
+                    data-testid="dream-image-flying"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
+                    <p className="text-white text-xs p-2">Flying - Freedom & Liberation</p>
+                  </div>
+                </div>
+                <div className="relative group cursor-pointer">
+                  <img 
+                    src="/attached_assets/generated_images/Geometric_neural_patterns_brain_d8b55873.png"
+                    alt="Geometric neural patterns - representing structured thinking"
+                    className="w-full h-32 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
+                    data-testid="dream-image-patterns"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
+                    <p className="text-white text-xs p-2">Patterns - Analytical Mind</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Dream Symbol Analysis */}
               <Card className="glass-card p-6 rounded-xl hover-glow">
                 <h3 className="text-lg font-futuristic font-semibold mb-6">Dream Symbol Analysis</h3>
                 <div className="space-y-4">
-                  {generateDreamSymbols().map((symbol, index) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <span className="text-sm">{symbol.symbol}</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-20 h-2 bg-card rounded-full overflow-hidden">
-                          <div 
-                            className="h-full rounded-full"
-                            style={{ 
-                              width: `${symbol.frequency}%`,
-                              backgroundColor: symbol.color
-                            }}
-                          />
+                  {generateDreamSymbols().map((symbol, index) => {
+                    const iconMap = {
+                      'Water/Ocean': '🌊',
+                      'Flying/Heights': '🕊️',
+                      'People/Faces': '👥',
+                      'Animals': '🦋'
+                    };
+                    return (
+                      <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-card/20 border border-primary/10">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-lg">{iconMap[symbol.symbol as keyof typeof iconMap]}</span>
+                          <span className="text-sm font-medium">{symbol.symbol}</span>
                         </div>
-                        <span className="text-xs font-mono" style={{ color: symbol.color }}>
-                          {symbol.frequency}%
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-20 h-3 bg-card rounded-full overflow-hidden">
+                            <div 
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{ 
+                                width: `${symbol.frequency}%`,
+                                backgroundColor: symbol.color
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs font-mono font-bold" style={{ color: symbol.color }}>
+                            {symbol.frequency}%
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Card>
 
               {/* Emotion Intensity */}
               <Card className="glass-card p-6 rounded-xl hover-glow">
                 <h3 className="text-lg font-futuristic font-semibold mb-6">Dream Emotion Intensity</h3>
-                <div className="grid grid-cols-2 gap-4 text-center text-sm">
-                  <div>
-                    <div className="text-2xl font-bold text-success mb-1">7.8</div>
-                    <div className="text-foreground/70">Joy/Happiness</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-primary mb-1">6.2</div>
-                    <div className="text-foreground/70">Curiosity</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-warning mb-1">3.4</div>
-                    <div className="text-foreground/70">Anxiety</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-secondary mb-1">2.1</div>
-                    <div className="text-foreground/70">Confusion</div>
-                  </div>
+                <div className="space-y-4">
+                  {[
+                    { emotion: 'Joy/Happiness', value: 7.8, color: 'text-success', icon: '😊' },
+                    { emotion: 'Curiosity', value: 6.2, color: 'text-primary', icon: '🤔' },
+                    { emotion: 'Anxiety', value: 3.4, color: 'text-warning', icon: '😰' },
+                    { emotion: 'Confusion', value: 2.1, color: 'text-secondary', icon: '😕' }
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-card/20 border border-primary/10">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-lg">{item.icon}</span>
+                        <span className="text-sm font-medium">{item.emotion}</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-16 h-2 bg-card rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              item.color === 'text-success' ? 'bg-success' :
+                              item.color === 'text-primary' ? 'bg-primary' :
+                              item.color === 'text-warning' ? 'bg-warning' : 'bg-secondary'
+                            }`}
+                            style={{ width: `${(item.value / 10) * 100}%` }}
+                          />
+                        </div>
+                        <span className={`text-sm font-bold font-mono ${item.color}`}>
+                          {item.value}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card>
             </div>
 
-            {/* Latest Dream Analysis */}
+            {/* Enhanced Dream Analysis */}
             <Card className="glass-card p-6 rounded-xl hover-glow">
               <h3 className="text-lg font-futuristic font-semibold mb-6">Latest Dream Interpretation</h3>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <div className="bg-card/30 p-4 rounded-lg border border-secondary/20 mb-4">
-                    <h4 className="font-semibold text-secondary mb-2">Sample Dream Analysis</h4>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <div className="relative overflow-hidden rounded-lg mb-4">
+                    <img 
+                      src="/attached_assets/generated_images/Stone_bridge_over_water_937b9eb2.png"
+                      alt="Bridge over ocean dream visualization"
+                      className="w-full h-48 object-cover"
+                      data-testid="main-dream-image"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4">
+                      <h4 className="font-semibold text-white text-lg">Bridge Over Ocean</h4>
+                      <p className="text-white/80 text-sm">Latest dream visualization</p>
+                    </div>
+                  </div>
+                  <div className="bg-card/30 p-4 rounded-lg border border-secondary/20">
+                    <h4 className="font-semibold text-secondary mb-2">Dream Narrative</h4>
                     <p className="text-foreground/80 text-sm mb-4">
                       "I was standing on a bridge over a vast ocean. The water was crystal clear, and I could see colorful fish swimming far below. 
                       Suddenly, I had the ability to fly and soared over the water, feeling completely free and weightless. 
@@ -435,13 +522,39 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-card/30 rounded-lg p-4 border border-primary/20">
-                  <h4 className="font-semibold text-primary mb-3">AI Analysis</h4>
-                  <div className="space-y-2 text-sm text-foreground/80">
-                    <p><strong>Symbolism:</strong> Water represents emotional depths and unconscious mind.</p>
-                    <p><strong>Flying:</strong> Indicates desire for freedom and transcendence of limitations.</p>
-                    <p><strong>Geometric Patterns:</strong> Suggest structured thinking and analytical mind.</p>
-                    <p className="text-success"><strong>Overall:</strong> Positive dream indicating emotional clarity and personal growth.</p>
+                <div className="space-y-4">
+                  <div className="bg-card/30 rounded-lg p-4 border border-primary/20">
+                    <h4 className="font-semibold text-primary mb-3 flex items-center">
+                      <Brain className="mr-2 h-4 w-4" />
+                      AI Analysis
+                    </h4>
+                    <div className="space-y-3 text-sm text-foreground/80">
+                      <div className="flex items-start space-x-2">
+                        <span className="text-lg">🌊</span>
+                        <div>
+                          <p className="font-medium text-primary">Water Symbolism</p>
+                          <p>Represents emotional depths and unconscious mind. Clear water indicates clarity of thought.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <span className="text-lg">🕊️</span>
+                        <div>
+                          <p className="font-medium text-secondary">Flying Experience</p>
+                          <p>Indicates desire for freedom and transcendence of current limitations.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <span className="text-lg">🔮</span>
+                        <div>
+                          <p className="font-medium text-accent">Geometric Patterns</p>
+                          <p>Suggest structured thinking and analytical approach to problem-solving.</p>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-success/10 rounded-lg border border-success/20">
+                        <p className="text-success font-semibold">Overall Interpretation:</p>
+                        <p className="text-foreground/80 text-xs mt-1">Positive dream indicating emotional clarity, personal growth, and readiness for new challenges.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
