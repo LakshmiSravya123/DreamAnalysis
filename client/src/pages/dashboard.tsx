@@ -368,45 +368,66 @@ export default function Dashboard() {
               <h3 className="text-lg font-futuristic font-semibold mb-6">Dream Visualization Gallery</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="relative group cursor-pointer">
-                  <img 
-                    src="/attached_assets/generated_images/Stone_bridge_over_water_937b9eb2.png"
-                    alt="Bridge over water - symbolizing connection and transition"
-                    className="w-full h-32 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
-                    data-testid="dream-image-bridge"
-                  />
+                  <div 
+                    className="w-full h-32 rounded-lg hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600 flex items-center justify-center"
+                    data-testid="dream-visual-bridge"
+                  >
+                    <div className="text-center text-white">
+                      <div className="text-4xl mb-2">🌉</div>
+                      <div className="text-xs font-medium">Bridge</div>
+                    </div>
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
                     <p className="text-white text-xs p-2">Bridge - Connection & Transition</p>
                   </div>
                 </div>
                 <div className="relative group cursor-pointer">
-                  <img 
-                    src="/attached_assets/generated_images/Dreamy_ocean_underwater_scene_960ab45b.png"
-                    alt="Underwater ocean scene with fish - representing emotional depths"
-                    className="w-full h-32 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
-                    data-testid="dream-image-ocean"
-                  />
+                  <div 
+                    className="w-full h-32 rounded-lg hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-teal-500 via-blue-500 to-indigo-600 flex items-center justify-center"
+                    data-testid="dream-visual-ocean"
+                  >
+                    <div className="text-center text-white">
+                      <div className="text-4xl mb-2">🌊</div>
+                      <div className="text-xs font-medium">Ocean</div>
+                    </div>
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
                     <p className="text-white text-xs p-2">Ocean - Emotional Depths</p>
                   </div>
                 </div>
                 <div className="relative group cursor-pointer">
-                  <img 
-                    src="/attached_assets/generated_images/Flying_through_clouds_freedom_d3128361.png"
-                    alt="Flying through clouds - representing freedom and transcendence"
-                    className="w-full h-32 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
-                    data-testid="dream-image-flying"
-                  />
+                  <div 
+                    className="w-full h-32 rounded-lg hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-sky-400 via-purple-500 to-pink-500 flex items-center justify-center"
+                    data-testid="dream-visual-flying"
+                  >
+                    <div className="text-center text-white">
+                      <div className="text-4xl mb-2">🕊️</div>
+                      <div className="text-xs font-medium">Flying</div>
+                    </div>
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
                     <p className="text-white text-xs p-2">Flying - Freedom & Liberation</p>
                   </div>
                 </div>
                 <div className="relative group cursor-pointer">
-                  <img 
-                    src="/attached_assets/generated_images/Geometric_neural_patterns_brain_d8b55873.png"
-                    alt="Geometric neural patterns - representing structured thinking"
-                    className="w-full h-32 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
-                    data-testid="dream-image-patterns"
-                  />
+                  <div 
+                    className="w-full h-32 rounded-lg hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 flex items-center justify-center relative overflow-hidden"
+                    data-testid="dream-visual-patterns"
+                  >
+                    <div className="text-center text-white z-10">
+                      <div className="text-4xl mb-2">🔮</div>
+                      <div className="text-xs font-medium">Patterns</div>
+                    </div>
+                    <div className="absolute inset-0 opacity-30">
+                      <div className="w-full h-full" style={{
+                        backgroundImage: `
+                          linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 32%, rgba(255,255,255,0.1) 34%, transparent 36%),
+                          linear-gradient(-45deg, transparent 30%, rgba(255,255,255,0.1) 32%, rgba(255,255,255,0.1) 34%, transparent 36%)
+                        `,
+                        backgroundSize: '20px 20px'
+                      }}></div>
+                    </div>
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
                     <p className="text-white text-xs p-2">Patterns - Analytical Mind</p>
                   </div>
@@ -494,13 +515,30 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
                   <div className="relative overflow-hidden rounded-lg mb-4">
-                    <img 
-                      src="/attached_assets/generated_images/Stone_bridge_over_water_937b9eb2.png"
-                      alt="Bridge over ocean dream visualization"
-                      className="w-full h-48 object-cover"
-                      data-testid="main-dream-image"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                    <div 
+                      className="w-full h-48 bg-gradient-to-br from-blue-600 via-cyan-500 to-teal-600 flex items-center justify-center relative"
+                      data-testid="main-dream-visual"
+                    >
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="w-full h-full" style={{
+                          backgroundImage: `
+                            radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 2px, transparent 2px),
+                            radial-gradient(circle at 80% 70%, rgba(255,255,255,0.1) 2px, transparent 2px),
+                            linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.05) 50%, transparent 60%)
+                          `,
+                          backgroundSize: '50px 50px, 70px 70px, 100% 100%'
+                        }}></div>
+                      </div>
+                      <div className="text-center text-white z-10">
+                        <div className="text-6xl mb-4">🌉</div>
+                        <div className="flex space-x-4 text-3xl">
+                          <span className="animate-float">🌊</span>
+                          <span className="animate-float" style={{ animationDelay: '0.5s' }}>🕊️</span>
+                          <span className="animate-float" style={{ animationDelay: '1s' }}>🔮</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-lg"></div>
                     <div className="absolute bottom-4 left-4">
                       <h4 className="font-semibold text-white text-lg">Bridge Over Ocean</h4>
                       <p className="text-white/80 text-sm">Latest dream visualization</p>
