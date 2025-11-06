@@ -1,6 +1,12 @@
 {
-  "buildCommand": "vite build",
-  "outputDirectory": "dist/public",
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist/public" }
+    }
+  ],
   "functions": {
     "api/**/*.ts": {
       "memory": 1024,
@@ -8,13 +14,7 @@
     }
   },
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
