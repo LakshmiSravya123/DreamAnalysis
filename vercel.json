@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "vite build --outDir dist/public",
+  "buildCommand": "vite build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": null,
-  "outputDirectory": "dist/public",
+  "outputDirectory": "dist",
   "functions": {
     "api/**/*.ts": {
       "memory": 1024,

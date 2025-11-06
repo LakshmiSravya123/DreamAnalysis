@@ -50,8 +50,8 @@ If you already have a PostgreSQL database, make sure:
    
    **Build & Output Settings:**
    - These are already configured in `vercel.json` and will be automatically detected
-   - Build Command: `vite build --outDir dist/public`
-   - Output Directory: `dist/public`
+   - Build Command: `vite build`
+   - Output Directory: `dist`
    - Install Command: `npm install`
    
    **You don't need to manually set these** - Vercel will read them from vercel.json
