@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb } from '../_lib/db';
 import { getOpenAIClient } from '../_lib/openai';
 import { success, error, methodNotAllowed, badRequest } from '../_lib/response';
-import { aiChat, healthMetrics } from '../../shared/schema';
+import { aiChats, healthMetrics } from '../../shared/schema';
 import { eq, desc } from 'drizzle-orm';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const db = getDb();
       
       // Store user message
-      await db.insert(aiChat).values({
+      await db.insert(aiChats).values({
         userId,
         message,
         isUser: true
@@ -57,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       // Store AI response
       const [newChat] = await db
-        .insert(aiChat)
+        .insert(aiChats)
         .values({
           userId,
           message: aiResponse,

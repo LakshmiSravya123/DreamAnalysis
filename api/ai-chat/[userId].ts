@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb } from '../_lib/db';
 import { success, error, methodNotAllowed } from '../_lib/response';
-import { aiChat } from '../../shared/schema';
+import { aiChats } from '../../shared/schema';
 import { eq, desc } from 'drizzle-orm';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -16,9 +16,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const db = getDb();
       const chats = await db
         .select()
-        .from(aiChat)
-        .where(eq(aiChat.userId, userId))
-        .orderBy(desc(aiChat.timestamp))
+        .from(aiChats)
+        .where(eq(aiChats.userId, userId))
+        .orderBy(desc(aiChats.timestamp))
         .limit(50);
       
       return success(res, chats);

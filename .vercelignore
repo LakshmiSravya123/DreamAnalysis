@@ -1,0 +1,11 @@
+server
+node_modules
+.git
+.cache
+*.log
+*.md
+!VERCEL_DEPLOYMENT.md
+.replit
+replit.md
+dream-analysis-*.png
+attached_assets
