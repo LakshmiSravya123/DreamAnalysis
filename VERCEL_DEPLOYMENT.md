@@ -48,35 +48,32 @@ If you already have a PostgreSQL database, make sure:
    
    **Root Directory:** `./` (leave as is)
    
-   **Build Command:** 
-   ```
-   vite build --outDir dist/public
-   ```
+   **Build & Output Settings:**
+   - These are already configured in `vercel.json` and will be automatically detected
+   - Build Command: `vite build --outDir dist/public`
+   - Output Directory: `dist/public`
+   - Install Command: `npm install`
    
-   **Output Directory:** 
-   ```
-   dist/public
-   ```
-   
-   **Install Command:** 
-   ```
-   npm install
-   ```
+   **You don't need to manually set these** - Vercel will read them from vercel.json
 
-5. Click "Environment Variables" and add the following:
+5. Click "Environment Variables" and add the following (**ALL REQUIRED**):
 
    | Name | Value | Description |
    |------|-------|-------------|
-   | `DATABASE_URL` | `your-neon-connection-string` | PostgreSQL connection string |
-   | `OPENAI_API_KEY` | `your-openai-api-key` | Your OpenAI API key |
-   | `JWT_SECRET` | `your-random-secret-key` | A random string for JWT signing (generate one!) |
+   | `DATABASE_URL` | `your-neon-connection-string` | **REQUIRED:** PostgreSQL connection string |
+   | `OPENAI_API_KEY` | `your-openai-api-key` | **REQUIRED:** Your OpenAI API key |
+   | `JWT_SECRET` | `your-random-secret-key` | **REQUIRED:** A random string for JWT signing (generate one!) |
    | `NODE_ENV` | `production` | Environment mode |
 
-   **To generate a secure JWT_SECRET:**
+   **⚠️ IMPORTANT: JWT_SECRET is REQUIRED for security**
+   
+   Generate a secure JWT_SECRET using this command:
    ```bash
    # Run this in terminal:
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
+   
+   **The deployment will fail if JWT_SECRET is not set.** This is intentional to prevent running with an insecure default secret.
 
 6. Click "Deploy"
 
