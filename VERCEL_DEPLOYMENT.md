@@ -137,6 +137,22 @@ All API endpoints remain the same:
 
 ## Troubleshooting
 
+### Issue: Getting 404 error or blank page
+**Solution:** This is usually a SPA routing issue. Make sure `vercel.json` has the catch-all rewrite:
+```json
+"rewrites": [
+  {
+    "source": "/api/:path*",
+    "destination": "/api/:path*"
+  },
+  {
+    "source": "/(.*)",
+    "destination": "/index.html"
+  }
+]
+```
+The catch-all `"/(.*)" -> "/index.html"` must come AFTER the API rewrite. Redeploy after fixing.
+
 ### Issue: "DATABASE_URL is not defined"
 **Solution:** Make sure you added the environment variable in Vercel's project settings and redeployed.
 
